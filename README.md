@@ -48,11 +48,27 @@ Opens at http://localhost:4321. Until Firebase is configured, sign-in is skipped
 7. Run the site, open `/admin`, **Continue with Google** with the owner's Google account. The page shows your **UID** —
    paste it into `firestore.rules` (replace `PASTE_OWNER_UID_HERE`) and publish the rules again.
 
-### 2. Deploy to Cloudflare Pages
+### 2. Order emails (free, Google Apps Script)
+After each order, the customer gets a confirmation email and the business Gmail gets a new-order email.
+Emails are sent **from the Gmail account that deploys the script** (use the shop's Gmail). Limit ≈ 50 orders/day.
+
+1. Signed in to the **shop's Gmail**, open https://script.google.com → **New project**. Name it `Melt & Box order emails`.
+2. Replace the contents of `Code.gs` with [`apps-script/Code.gs`](apps-script/Code.gs). Check `CONFIG` at the top
+   (`siteUrl` should be the live site address once it's deployed). Save.
+3. Project Settings (⚙) → tick **Show "appsscript.json"** → open it in the editor and replace it with [`apps-script/appsscript.json`](apps-script/appsscript.json). Save.
+4. In the editor's function dropdown pick **sendTestEmails** → **Run** → **Review permissions** → choose the shop Gmail.
+   Google shows "Google hasn't verified this app" (normal for your own script) → **Advanced → Go to … (unsafe)** → **Allow**.
+   Two sample emails arrive in the inbox — that confirms sending works.
+5. **Deploy → New deployment** → type **Web app** → Execute as **Me** → Who has access **Anyone** → **Deploy**. Copy the URL ending in `/exec`.
+6. Put it in `.env` as `PUBLIC_ORDER_EMAIL_URL=...` (and in Cloudflare Pages environment variables), then rebuild/redeploy the site.
+
+If you edit `Code.gs` later: **Deploy → Manage deployments → ✏️ → Version: New version → Deploy** (the URL stays the same).
+
+### 3. Deploy to Cloudflare Pages
 1. Push this folder to a GitHub repository.
 2. https://dash.cloudflare.com → **Workers & Pages → Create → Pages → Connect to Git** → pick the repo.
 3. Build command `npm run build`, output directory `dist`.
-4. **Environment variables**: `PUBLIC_FIREBASE_API_KEY`, `PUBLIC_FIREBASE_AUTH_DOMAIN`, `PUBLIC_FIREBASE_PROJECT_ID`, and `NODE_VERSION` = `22`.
+4. **Environment variables**: `PUBLIC_FIREBASE_API_KEY`, `PUBLIC_FIREBASE_AUTH_DOMAIN`, `PUBLIC_FIREBASE_PROJECT_ID`, `PUBLIC_ORDER_EMAIL_URL`, and `NODE_VERSION` = `24`.
 5. Deploy → you get `https://<name>.pages.dev`. Update `SITE.url` in `src/config.ts`, `site` in `astro.config.mjs` and `public/robots.txt`.
 6. Firebase → Authentication → Settings → **Authorized domains** → add your `pages.dev` (and custom) domain, or Google sign-in will be refused there.
 
@@ -70,10 +86,7 @@ All products and prices live in `src/data/products.ts`; photos in `src/assets/pr
 If you change the ₹599 / ₹999 offers, also update the two numbers in `firestore.rules`.
 
 ## Planned (not built yet)
-- **Order confirmation emails** to the customer and the business, free: a Google Apps Script web app deployed from the
-  business Gmail sends both emails after each order (~100 recipients/day ≈ 50 orders/day on a free Gmail).
-  Needs: the business Gmail address, and the owner deploying the script and sharing its web-app URL.
-  If a custom domain is bought later, Brevo (300 emails/day free) is the upgrade path.
+- If a custom domain is bought later, order emails can move to Brevo (300 emails/day free) with an `orders@yourdomain` sender.
 - **Instant WhatsApp alert to the owner** for each new order, from the same script: CallMeBot (free, own number only,
   unofficial) or a Telegram bot (free, official). Automatic WhatsApp messages to *customers* are not free (Meta's
   WhatsApp Business Platform charges per message), so the owner contacts customers via the `/admin` WhatsApp buttons.
