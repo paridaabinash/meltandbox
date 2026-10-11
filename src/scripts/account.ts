@@ -1,7 +1,7 @@
 // /account: Google sign-in, saved details and the customer's own orders (Firestore REST + ID token).
 import { esc, inr } from './cart-store';
 import { dbReady, getDoc, queryEq } from './firestore-rest';
-import { STATUSES, statusInfo, type Order, type Profile } from './order-status';
+import { STATUSES, orderTotal, statusInfo, type Order, type Profile } from './order-status';
 import { FIREBASE } from '../config';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
@@ -83,7 +83,11 @@ function card(o: Order & { id: string }) {
   $('.o-items', el).innerHTML = o.items
     .map((i) => `<li><span>${esc(i.name)} <span class="muted">(${esc(i.variantLabel)}) × ${i.qty}</span></span><b>${inr(i.price * i.qty)}</b></li>`)
     .join('');
-  $('.o-total strong', el).textContent = inr(o.subtotal) + (o.freeShipping ? '' : ' + shipping');
+  const shipKnown = o.freeShipping || o.shippingCharge != null;
+  $('.o-total', el).innerHTML =
+    `<span>Subtotal</span><span>${inr(o.subtotal)}</span>` +
+    `<span>Shipping</span><span>${o.freeShipping ? 'FREE' : shipKnown ? inr(o.shippingCharge!) : 'shared on WhatsApp'}</span>` +
+    `<b>Total</b><b>${shipKnown ? inr(orderTotal(o)) : `${inr(o.subtotal)} + shipping`}</b>`;
   const wa = $<HTMLAnchorElement>('.o-wa', el);
   wa.href += `?text=${encodeURIComponent(`Hi! I'd like to know about my order ${o.id}.`)}`;
   return el;

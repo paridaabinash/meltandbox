@@ -108,7 +108,8 @@ if (online) void (async () => {
 })();
 
 // ── submit ──
-function waText(id: string, o: Omit<Order, 'uid'>) {
+type NewOrder = Omit<Order, 'uid' | 'accountEmail'>;
+function waText(id: string, o: NewOrder) {
   const c = o.customer;
   return [
     `Hi Melt & Box Co.! I just placed an order on the website.`,
@@ -140,7 +141,7 @@ function notifyByEmail(orderId: string, idToken: string) {
   fetch(ORDER_EMAIL_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: JSON.stringify({ orderId, idToken }) }).catch(() => {});
 }
 
-function showDone(id: string, o: Omit<Order, 'uid'>, offline: boolean, emailedTo: string | null = null) {
+function showDone(id: string, o: NewOrder, offline: boolean, emailedTo: string | null = null) {
   placing = true;
   $('[data-co-main]').hidden = true;
   $('[data-co-empty]').hidden = true;
@@ -188,7 +189,7 @@ submitBtn.addEventListener('click', async () => {
     pincode: s('pincode'),
     state: s('state'),
   };
-  const order: Omit<Order, 'uid'> = {
+  const order: NewOrder = {
     customer,
     items: items.map((i) => ({ slug: i.slug, name: i.name, variant: i.v, variantLabel: i.vl, price: i.price, qty: i.qty })),
     subtotal,
@@ -210,7 +211,7 @@ submitBtn.addEventListener('click', async () => {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Placing your order…';
   try {
-    const writes = [createWrite(`orders/${id}`, { ...order, uid: user.uid }, ['createdAt'])];
+    const writes = [createWrite(`orders/${id}`, { ...order, uid: user.uid, accountEmail: user.email ?? '' }, ['createdAt'])];
     if (fd.get('save') === 'on') writes.push(setWrite(`users/${user.uid}`, { ...customer }, ['updatedAt']));
     const token = await user.getIdToken();
     await commit(writes, token);

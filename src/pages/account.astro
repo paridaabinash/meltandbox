@@ -52,7 +52,7 @@ import { waLink } from '../config';
       <ol class="steps"></ol>
       <p class="o-desc"></p>
       <ul class="o-items"></ul>
-      <div class="o-total"><span>Subtotal</span><strong></strong></div>
+      <div class="o-total"></div>
       <a class="btn btn-sm btn-ghost o-wa" target="_blank" rel="noopener" href={waLink()}><Icon name="whatsapp" size={18} /> Ask about this order</a>
     </article>
   </template>
@@ -237,8 +237,15 @@ import { waLink } from '../config';
     border-bottom: 1px solid var(--sand);
   }
   .orders :global(.o-total) {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+    font-size: 0.92rem;
+  }
+  .orders :global(.o-total b) {
+    padding-top: 6px;
+    border-top: 1px solid var(--sand);
+    font-size: 1rem;
   }
   .orders :global(.o-wa) {
     justify-self: start;

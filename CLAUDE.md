@@ -64,16 +64,21 @@ scripts/extract-catalog.py  one-time PDF → photos extractor (kept for referenc
 
 ## Data & security
 - `users/{uid}` — a customer's saved checkout details (name, WhatsApp number, address). Only that user + admin can read.
-- `orders/{MB-XXXXXXXXXX}` — has `uid`; only the signed-in owner of the order (or admin) can read; create requires sign-in,
-  `uid == auth.uid`, `contactConsent == true` and passes field validation. Order + profile are written in one atomic commit.
+- `orders/{MB-XXXXXXXXXX}` — has `uid` + `accountEmail` (== the token's email); only the signed-in owner of the order (or admin)
+  can read; create requires sign-in, `contactConsent == true` and passes field validation. Order + profile are written in one
+  atomic commit. Admin-only fields: `shippingCharge` (₹, null until set; ignored when `freeShipping`), `statusUpdatedAt`, `adminNote`.
+  Total = `orderTotal()` in order-status.ts (subtotal + shipping).
+- `settings/shop` — admin-only `{ upiId }`, edited in /admin → Shop settings, used in the WhatsApp confirm message and "Confirmed" email.
+- /admin edits are drafts until **Save changes** (status change → confirm() → `statusUpdatedAt: serverTimestamp()` → status email).
 - Payments are NOT taken online: the checkout must always tell customers (before and after placing the order) that they'll be
   contacted on their WhatsApp number for confirmation, payment and updates. Keep that copy if you edit checkout.
 - Sign-in = Google only (free). Phone-OTP sign-in costs money (SMS) — don't add it without asking.
 - Admin = Google account whose UID is listed in `firestore.rules` `isAdmin()`.
-- Order emails: after the order commit, checkout POSTs only `{orderId, idToken}` (no-cors, keepalive) to `ORDER_EMAIL_URL`.
-  `apps-script/Code.gs` verifies the token, reads the order AS the customer (rules enforce ownership), checks uid match +
-  freshness (15 min) + dedupe, then emails the verified Google address + the business. Never let the endpoint accept
-  recipients or email content from the request. After editing Code.gs the owner must redeploy a new version.
+- Order emails (`apps-script/Code.gs`, `ORDER_EMAIL_URL`): requests carry only `{orderId, idToken}` (+ `type:'status'`).
+  New order: checkout posts the customer's token; the script reads the order AS the customer, checks uid + freshness + dedupe.
+  Status change: /admin posts the owner's token; the script only accepts `CONFIG.adminUids` (keep in sync with `isAdmin()`),
+  reads order + settings, emails `accountEmail` (fallback: typed email) + the business. Never accept recipients or email
+  content from the request. After editing Code.gs the owner must redeploy a new version (Manage deployments → New version).
 - Client-sent prices are not trusted blindly: owner confirms every order manually; admin view re-checks totals against the catalogue.
 - No secrets in this repo. Firebase web config is public by design.
 

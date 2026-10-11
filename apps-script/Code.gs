@@ -1,11 +1,12 @@
 /**
  * Melt & Box Co. — order emails (Google Apps Script web app). Free: runs on the shop owner's Gmail.
  *
- * After checkout the website POSTs {orderId, idToken}. This script:
- *   1. looks up the signed-in customer from the Firebase ID token (verified Google email),
- *   2. reads that order from Firestore AS that customer (security rules: only the owner of the order can read it),
- *   3. emails the customer a confirmation and emails the business (the Gmail account that deployed this script).
- * Nothing in the request is trusted except the order id + token, so the endpoint can't be used to send arbitrary mail.
+ * 1. New order — after checkout the website POSTs {orderId, idToken} (customer's token). This script
+ *    looks up the signed-in customer from the token (verified Google email), reads that order from Firestore AS that
+ *    customer (rules: only the order's owner can read it), then emails the customer + the business.
+ * 2. Status change — /admin POSTs {type:'status', orderId, idToken} (owner's token). Only UIDs in CONFIG.adminUids are
+ *    accepted; the order + shop settings are read with the owner's token, then the customer + business are emailed.
+ * Nothing in a request is trusted except the order id + token, so the endpoint can't be used to send arbitrary mail.
  *
  * Setup: see README.md → "Order emails". Deploy → New deployment → Web app → Execute as: Me, Who has access: Anyone.
  * Gmail limit: ~100 recipients/day on a free account (2 per order ≈ 50 orders/day).
@@ -23,14 +24,17 @@ var CONFIG = {
   instagram: 'meltandboxco.in',
   // Business inbox for new-order alerts. Empty = the Gmail account that deployed this script.
   businessEmail: '',
-  freshMinutes: 15, // only email about orders created in the last N minutes (blocks replays)
+  freshMinutes: 15, // only email about orders/status changes from the last N minutes (blocks replays)
+  adminUids: ['DEV7zs6GWjSejA2PpnrbQsQQRUh1'], // same as isAdmin() in firestore.rules
 };
 
 // ── Web app entry ────────────────────────────────────────────────────────────
 function doPost(e) {
   try {
     var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    var result = handleOrder(String(body.orderId || ''), String(body.idToken || ''));
+    var orderId = String(body.orderId || '');
+    var idToken = String(body.idToken || '');
+    var result = body.type === 'status' ? handleStatus(orderId, idToken) : handleOrder(orderId, idToken);
     return json(result);
   } catch (err) {
     console.error(err);
@@ -77,6 +81,44 @@ function handleOrder(orderId, idToken) {
   }
 }
 
+// Owner changed an order's status in /admin → email the customer + business.
+function handleStatus(orderId, idToken) {
+  if (!/^MB-[2-9A-HJ-NP-Z]{10}$/.test(orderId) || idToken.length < 100) return { ok: false, error: 'bad-request' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var admin = lookupUser(idToken);
+    if (!admin || CONFIG.adminUids.indexOf(admin.uid) === -1) return { ok: false, error: 'forbidden' };
+
+    var order = readOrder(orderId, idToken);
+    if (!order) return { ok: false, error: 'not-found' };
+    if (!order.statusUpdatedAt || order.status === 'new') return { ok: false, error: 'no-status-change' };
+    if (!(Date.now() - new Date(order.statusUpdatedAt).getTime() < CONFIG.freshMinutes * 60 * 1000)) return { ok: false, error: 'stale' };
+
+    var key = 'st:' + orderId + ':' + order.statusUpdatedAt;
+    var props = PropertiesService.getScriptProperties();
+    if (props.getProperty(key)) return { ok: true, duplicate: true };
+
+    var settings = readDoc('settings/shop', idToken) || {};
+    var business = CONFIG.businessEmail || Session.getEffectiveUser().getEmail();
+    var to = order.accountEmail || (order.customer && order.customer.email) || '';
+
+    if (to) {
+      var c = buildStatusEmail(orderId, order, settings);
+      MailApp.sendEmail({ to: to, subject: c.subject, htmlBody: c.html, body: c.text, name: CONFIG.shopName, replyTo: business });
+    }
+    var b = buildStatusBusinessEmail(orderId, order, to);
+    MailApp.sendEmail({ to: business, subject: b.subject, htmlBody: b.html, body: b.text, name: CONFIG.shopName + ' Orders' });
+
+    props.setProperty(key, String(Date.now()));
+    pruneSent(props);
+    return { ok: true, customer: !!to };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // ── Firebase lookups ─────────────────────────────────────────────────────────
 function lookupUser(idToken) {
   var res = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + CONFIG.apiKey, {
@@ -91,7 +133,11 @@ function lookupUser(idToken) {
 }
 
 function readOrder(orderId, idToken) {
-  var url = 'https://firestore.googleapis.com/v1/projects/' + CONFIG.projectId + '/databases/(default)/documents/orders/' + orderId;
+  return readDoc('orders/' + orderId, idToken);
+}
+
+function readDoc(path, idToken) {
+  var url = 'https://firestore.googleapis.com/v1/projects/' + CONFIG.projectId + '/databases/(default)/documents/' + path;
   var res = UrlFetchApp.fetch(url, { headers: { Authorization: 'Bearer ' + idToken }, muteHttpExceptions: true });
   if (res.getResponseCode() !== 200) return null;
   return fromFields(JSON.parse(res.getContentText()).fields || {});
@@ -158,6 +204,78 @@ function buildBusinessEmail(id, o, user) {
   return { subject: subject, html: layout(inner, 'New order ' + id), text: businessText(id, o, user) };
 }
 
+// ── Status-change emails ─────────────────────────────────────────────────────
+var STATUS_COPY = {
+  confirmed: { label: 'Confirmed', subject: 'is confirmed ✅', title: 'Your order is confirmed!', body: 'Great news — we’ve confirmed your order and will start handcrafting it as soon as your payment is received.' },
+  paid: { label: 'Payment received', subject: '— payment received 💛', title: 'Payment received — thank you!', body: 'We’ve received your payment. Your candles are now being handmade and packed with love.' },
+  shipped: { label: 'Shipped', subject: 'has been shipped 📦', title: 'Your order is on its way!', body: 'Your parcel has been shipped. We’ll keep you posted on WhatsApp if there’s anything you need to know.' },
+  delivered: { label: 'Delivered', subject: 'has been delivered ✨', title: 'Delivered — enjoy the glow!', body: 'Your order has been delivered. We hope you love it! We’d be thrilled if you tagged us on Instagram @' + CONFIG.instagram + '.' },
+  cancelled: { label: 'Cancelled', subject: 'was cancelled', title: 'Your order was cancelled', body: 'Your order has been cancelled. If this is unexpected, just reply to this email or message us on WhatsApp.' },
+};
+
+function orderTotal(o) {
+  return Number(o.subtotal) + (o.freeShipping ? 0 : Number(o.shippingCharge || 0));
+}
+function shippingKnown(o) {
+  return o.freeShipping || (o.shippingCharge !== null && o.shippingCharge !== undefined);
+}
+
+function buildStatusEmail(id, o, settings) {
+  var copy = STATUS_COPY[o.status] || { label: o.status, subject: 'was updated', title: 'Order update', body: 'Your order status has been updated.' };
+  var first = String(o.customer.name || '').split(' ')[0] || 'there';
+  var total = orderTotal(o);
+  var payBox = '';
+  if (o.status === 'confirmed') {
+    payBox = settings.upiId
+      ? infoBox('💳 <b>Payment</b><br>Please pay <b>' + inr(total) + '</b> via UPI to <b>' + esc(settings.upiId) + '</b> and add <b>' + esc(id) +
+          '</b> in the payment note. Then share the payment screenshot with us on WhatsApp.', '#eaf6ee', '#cfe8d6', '#24502f')
+      : infoBox('💳 <b>Payment</b><br>We’ve shared the payment details with you on WhatsApp. Total to pay: <b>' + inr(total) + '</b>.', '#eaf6ee', '#cfe8d6', '#24502f');
+  }
+  var inner =
+    p('Hi ' + esc(first) + ',', 'font-size:16px') +
+    p('<span style="font-family:Georgia,Times New Roman,serif;font-style:italic;font-weight:bold;font-size:20px">' + esc(copy.title) + '</span>') +
+    p(esc(copy.body)) +
+    payBox +
+    statusSteps(o.status) +
+    orderBlock(id, o) +
+    button(CONFIG.siteUrl + '/account/', 'View my orders', C.cocoa) +
+    p('Questions? Reply to this email or message us on <a href="https://wa.me/' + CONFIG.whatsapp + '" style="color:' + C.rose + '">WhatsApp</a>.', 'font-size:13px;color:' + C.cocoa2);
+  var text = [copy.title, '', copy.body, '', 'Order ' + id, itemsText(o)].join('\n') +
+    (o.status === 'confirmed' && settings.upiId ? '\n\nPlease pay ' + inr(total) + ' via UPI to ' + settings.upiId + ' (note: ' + id + ').' : '') +
+    '\n\nYour orders: ' + CONFIG.siteUrl + '/account/';
+  return { subject: 'Your ' + CONFIG.shopName + ' order ' + id + ' ' + copy.subject, html: layout(inner, copy.title), text: text };
+}
+
+function buildStatusBusinessEmail(id, o, customerEmail) {
+  var label = (STATUS_COPY[o.status] || { label: o.status }).label;
+  var inner =
+    p('<b style="font-size:18px">' + esc(id) + ' → ' + esc(label) + '</b><br><span style="color:' + C.cocoa2 + '">' + esc(fmtDate(o.statusUpdatedAt)) + '</span>') +
+    table([
+      ['Customer', esc(o.customer.name) + ' · +91 ' + esc(o.customer.phone)],
+      ['Customer email', customerEmail ? esc(customerEmail) + ' (notified)' : '<b>none on this order — not notified</b>'],
+      ['Total', shippingKnown(o) ? inr(orderTotal(o)) : inr(o.subtotal) + ' + shipping (not set)'],
+    ]) +
+    button(CONFIG.siteUrl + '/admin/', 'Open order desk', C.cocoa);
+  return {
+    subject: '📋 ' + id + ' → ' + label + ' — ' + o.customer.name,
+    html: layout(inner, id + ' → ' + label),
+    text: id + ' → ' + label + '\nCustomer: ' + o.customer.name + ' +91 ' + o.customer.phone + '\nNotified: ' + (customerEmail || 'no email'),
+  };
+}
+
+function statusSteps(status) {
+  var steps = ['new', 'confirmed', 'paid', 'shipped', 'delivered'];
+  var labels = ['Received', 'Confirmed', 'Paid', 'Shipped', 'Delivered'];
+  if (status === 'cancelled') return '';
+  var idx = steps.indexOf(status);
+  var cells = labels.map(function (l, i) {
+    var done = i <= idx;
+    return '<td align="center" style="padding:4px 2px;font-size:11px;color:' + (done ? C.cocoa : C.cocoa2) + ';font-weight:' + (done ? 'bold' : 'normal') + '">' +
+      '<div style="width:14px;height:14px;margin:0 auto 4px;border-radius:50%;background:' + (done ? C.rose : C.sand) + '"></div>' + l + '</td>';
+  });
+  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 4px"><tr>' + cells.join('') + '</tr></table>';
+}
+
 function orderBlock(id, o) {
   var rows = (o.items || [])
     .map(function (i) {
@@ -174,9 +292,13 @@ function orderBlock(id, o) {
   return (
     h3('Order ' + esc(id)) +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:15px;color:' + C.cocoa + '">' + rows +
-    '<tr><td style="padding:12px 0 0;font-weight:bold">Subtotal</td><td align="right" style="padding:12px 0 0;font-weight:bold">' + inr(o.subtotal) + '</td></tr>' +
+    '<tr><td style="padding:12px 0 0">Subtotal</td><td align="right" style="padding:12px 0 0">' + inr(o.subtotal) + '</td></tr>' +
     '<tr><td style="padding:4px 0 0;color:' + C.cocoa2 + ';font-size:13px">Shipping</td><td align="right" style="padding:4px 0 0;color:' + C.cocoa2 + ';font-size:13px">' +
-    (o.freeShipping ? 'FREE' : 'shared on WhatsApp') + '</td></tr></table>'
+    (o.freeShipping ? 'FREE' : shippingKnown(o) ? inr(o.shippingCharge) : 'shared on WhatsApp') + '</td></tr>' +
+    (shippingKnown(o)
+      ? '<tr><td style="padding:8px 0 0;font-weight:bold;border-top:1px solid ' + C.sand + '">Total</td><td align="right" style="padding:8px 0 0;font-weight:bold;border-top:1px solid ' + C.sand + '">' + inr(orderTotal(o)) + '</td></tr>'
+      : '') +
+    '</table>'
   );
 }
 
@@ -248,7 +370,8 @@ function businessText(id, o, user) {
 function itemsText(o) {
   return (o.items || []).map(function (i) { return '• ' + i.name + ' (' + i.variantLabel + ') × ' + i.qty + ' — ' + inr(i.price * i.qty); }).join('\n') +
     (o.freeMiniCandle ? '\n🎁 Free mini candle' : '') +
-    '\nSubtotal: ' + inr(o.subtotal) + (o.freeShipping ? ' (free shipping)' : ' + shipping');
+    '\nSubtotal: ' + inr(o.subtotal) +
+    (o.freeShipping ? ' (free shipping)' : shippingKnown(o) ? '\nShipping: ' + inr(o.shippingCharge) + '\nTotal: ' + inr(orderTotal(o)) : ' + shipping');
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

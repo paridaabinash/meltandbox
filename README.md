@@ -8,8 +8,10 @@ Developer/AI guidelines: see [CLAUDE.md](CLAUDE.md).
 2. They **sign in with Google** (creates their account the first time).
 3. They enter their **WhatsApp number** and address, and tick a box agreeing to be contacted on that number
    for order confirmation, payment and updates. Details are saved for next time.
-4. You see the order instantly at `/admin`, message them on WhatsApp to confirm and share payment details.
-5. You update the status (Confirmed → Payment received → Shipped → Delivered); the customer sees it at `/account`.
+4. You see the order instantly at `/admin` (and by email), enter the shipping charge, and send the one-tap WhatsApp
+   confirmation — it includes the exact total and your saved UPI ID.
+5. You update the status (Confirmed → Payment received → Shipped → Delivered) and press **Save changes**; the customer
+   gets an email for each change and sees it at `/account`.
 
 No online payment happens on the website.
 
@@ -75,10 +77,12 @@ If you edit `Code.gs` later: **Deploy → Manage deployments → ✏️ → Vers
 Every `git push` redeploys automatically.
 
 ## Managing orders (`/admin`)
+- **Shop settings** (top): save your **UPI ID** once; change it any time. It's added to the WhatsApp confirmation and the "Order confirmed" email.
 - New orders chime and show at the top (the tab title shows the count).
-- Each order shows the customer's number and whether it's on WhatsApp.
-- One-tap WhatsApp messages: **confirm + payment** (pre-filled with items and total — fill in shipping and your payment details), **shipped**, or open a chat.
-- Private notes per order (shipping charge, courier tracking number…).
+- Each order has **Status** + **Shipping charge ₹** (hidden when shipping is free). Nothing is saved until you press
+  **Save changes**; a status change asks for confirmation, then emails the customer and you.
+- **WhatsApp: confirm + payment** is enabled once the shipping charge is saved: items, subtotal, shipping, exact total and your UPI ID are pre-filled.
+- Private notes per order (courier, tracking number…) save automatically.
 - A warning appears if an order's prices don't match the current catalogue.
 
 ## Editing products

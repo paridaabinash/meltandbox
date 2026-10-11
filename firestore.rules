@@ -7,6 +7,7 @@ rules_version = '2';
 // Data:
 //   users/{uid}       a customer's saved checkout details (only they + the owner can read)
 //   orders/{orderId}  one order; `uid` = customer who placed it
+//   settings/shop     owner-only shop settings (UPI ID)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -49,10 +50,11 @@ service cloud.firestore {
 
     function validNewOrder(id) {
       let d = request.resource.data;
-      let keys = ['uid', 'customer', 'items', 'subtotal', 'freeMiniCandle', 'freeShipping', 'contactConsent', 'note', 'status', 'createdAt'];
+      let keys = ['uid', 'accountEmail', 'customer', 'items', 'subtotal', 'freeMiniCandle', 'freeShipping', 'contactConsent', 'note', 'status', 'createdAt'];
       return id.matches('MB-[2-9A-HJ-NP-Z]{10}')
         && d.keys().hasOnly(keys) && d.keys().hasAll(keys)
         && d.uid == request.auth.uid
+        && d.accountEmail == request.auth.token.get('email', '')
         && validCustomer(d.customer)
         && d.items is list && d.items.size() >= 1 && d.items.size() <= 60
         && d.subtotal is int && d.subtotal > 0 && d.subtotal <= 500000
@@ -77,6 +79,10 @@ service cloud.firestore {
       allow get, list: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
       allow create: if request.auth != null && validNewOrder(orderId);
       allow update, delete: if isAdmin();
+    }
+
+    match /settings/{doc} {
+      allow read, write: if isAdmin();
     }
 
     // Everything else is closed.

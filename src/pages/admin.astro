@@ -28,6 +28,19 @@ import GoogleButton from '../components/GoogleButton.astro';
 
     <!-- Dashboard -->
     <section data-dash hidden>
+      <details class="card settings" data-settings>
+        <summary><span class="serif">Shop settings</span> <span class="muted">· UPI ID: <b data-upi-current>not set</b></span></summary>
+        <form class="settings-form" data-settings-form>
+          <div class="field">
+            <label for="upi">UPI ID for payments</label>
+            <input class="input" id="upi" name="upi" placeholder="e.g. meltandbox@okaxis" autocomplete="off" spellcheck="false" maxlength="100" />
+          </div>
+          <button class="btn btn-sm" type="submit">Save</button>
+          <p class="muted hint">Included in the WhatsApp “confirm + payment” message and in the customer's “Order confirmed” email.</p>
+          <p class="settings-msg" data-settings-msg role="status"></p>
+        </form>
+      </details>
+
       <div class="stats" data-stats></div>
       <div class="tools">
         <div class="tabs" data-tabs></div>
@@ -44,8 +57,21 @@ import GoogleButton from '../components/GoogleButton.astro';
           <strong class="o-id"></strong>
           <span class="o-time muted"></span>
         </div>
-        <select class="input o-status" aria-label="Order status"></select>
+        <span class="badge o-badge"></span>
       </header>
+      <div class="o-manage">
+        <label class="o-field">
+          <span>Status</span>
+          <select class="input o-status"></select>
+        </label>
+        <label class="o-field o-ship-field">
+          <span>Shipping charge</span>
+          <span class="o-ship-wrap"><span class="rs">₹</span><input class="input o-ship" type="number" min="0" max="5000" step="1" inputmode="numeric" placeholder="0" /></span>
+        </label>
+        <span class="o-field o-free" hidden><span>Shipping</span><b>FREE</b></span>
+        <button type="button" class="btn btn-sm btn-rose o-save" disabled>Save changes</button>
+        <span class="o-saved" role="status"></span>
+      </div>
       <div class="o-body">
         <div class="o-cust">
           <b class="o-name"></b>
@@ -58,15 +84,17 @@ import GoogleButton from '../components/GoogleButton.astro';
         <div class="o-items">
           <ul></ul>
           <div class="o-sub"></div>
+          <div class="o-shipline"></div>
+          <div class="o-total"></div>
           <p class="o-warn" hidden></p>
         </div>
       </div>
       <div class="o-actions">
         <a class="btn btn-sm btn-wa o-wa-confirm" target="_blank" rel="noopener">WhatsApp: confirm + payment</a>
-        <a class="btn btn-sm btn-ghost o-wa-shipped" target="_blank" rel="noopener">WhatsApp: shipped</a>
         <a class="btn btn-sm btn-ghost o-wa" target="_blank" rel="noopener">WhatsApp chat</a>
+        <span class="o-wa-hint muted"></span>
       </div>
-      <textarea class="input o-admin-note" rows="2" placeholder="Private note (shipping charge, tracking no., etc.) — saves automatically"></textarea>
+      <textarea class="input o-admin-note" rows="2" placeholder="Private note (courier, tracking no., etc.) — saves automatically"></textarea>
     </article>
   </template>
 </Base>
@@ -132,6 +160,36 @@ import GoogleButton from '../components/GoogleButton.astro';
     padding: 28px;
     display: grid;
     gap: 14px;
+  }
+  .settings {
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .settings summary {
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .settings summary .serif {
+    font-size: 1.1rem;
+  }
+  .settings-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px 12px;
+    margin-top: 12px;
+  }
+  .settings-form .field {
+    flex: 1 1 260px;
+  }
+  .settings-form .hint,
+  .settings-msg {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.8rem;
+  }
+  .settings-msg:empty {
+    display: none;
   }
   .stats {
     display: grid;
@@ -212,12 +270,6 @@ import GoogleButton from '../components/GoogleButton.astro';
   .orders :global(.o-time) {
     font-size: 0.8rem;
   }
-  .orders :global(.o-status) {
-    width: auto;
-    min-height: 38px;
-    padding: 6px 10px;
-    font-weight: 600;
-  }
   .orders :global(.o-body) {
     display: grid;
     gap: 14px;
@@ -257,11 +309,97 @@ import GoogleButton from '../components/GoogleButton.astro';
     padding: 5px 0;
     border-bottom: 1px dashed var(--sand);
   }
-  .orders :global(.o-sub) {
+  .orders :global(.o-sub),
+  .orders :global(.o-shipline),
+  .orders :global(.o-total) {
     display: flex;
     justify-content: space-between;
+    padding-top: 6px;
+    font-size: 0.9rem;
+  }
+  .orders :global(.o-total) {
+    margin-top: 4px;
     padding-top: 8px;
+    border-top: 1px solid var(--sand);
     font-weight: 700;
+    font-size: 1rem;
+  }
+  .orders :global(.o-manage) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px 14px;
+    padding: 12px;
+    border-radius: var(--r-sm);
+    background: var(--blush);
+  }
+  .orders :global(.o-field) {
+    display: grid;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cocoa-3);
+  }
+  .orders :global(.o-field b) {
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    color: var(--ok);
+    padding: 8px 0;
+  }
+  .orders :global(.o-status) {
+    width: auto;
+    min-height: 40px;
+    padding: 6px 10px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .orders :global(.o-ship-wrap) {
+    display: flex;
+    align-items: center;
+  }
+  .orders :global(.rs) {
+    display: grid;
+    place-items: center;
+    height: 40px;
+    padding: 0 10px;
+    border: 1.5px solid var(--sand);
+    border-right: 0;
+    border-radius: var(--r-sm) 0 0 var(--r-sm);
+    background: var(--paper);
+    color: var(--cocoa-2);
+    font-size: 0.9rem;
+  }
+  .orders :global(.o-ship) {
+    width: 110px;
+    min-height: 40px;
+    padding: 6px 10px;
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  }
+  .orders :global(.o-ship-field.needs .o-ship) {
+    border-color: var(--rose);
+  }
+  .orders :global(.o-save) {
+    min-height: 40px;
+  }
+  .orders :global(.o-saved) {
+    font-size: 0.82rem;
+    color: var(--cocoa-2);
+    align-self: center;
+  }
+  .orders :global(.o-wa-confirm[aria-disabled='true']) {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .orders :global(.o-wa-hint) {
+    font-size: 0.8rem;
+    align-self: center;
+  }
+  .orders :global(.o-badge) {
+    background: var(--blush-2);
+    color: var(--cocoa);
   }
   .orders :global(.o-warn) {
     margin: 8px 0 0;

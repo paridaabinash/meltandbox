@@ -38,6 +38,7 @@ export type Profile = Customer;
 
 export interface Order {
   uid: string; // Firebase Auth user who placed it
+  accountEmail: string; // their verified Google email (rules enforce it) — used for status emails
   customer: Customer;
   items: OrderItem[];
   subtotal: number;
@@ -47,8 +48,15 @@ export interface Order {
   note: string;
   status: StatusId;
   createdAt?: unknown;
+  // set by the owner in /admin
+  shippingCharge?: number | null; // ₹, only when !freeShipping
+  statusUpdatedAt?: unknown;
   adminNote?: string;
 }
+
+/** Subtotal + shipping (0 when free or not set yet). */
+export const orderTotal = (o: Pick<Order, 'subtotal' | 'freeShipping' | 'shippingCharge'>) =>
+  o.subtotal + (o.freeShipping ? 0 : (o.shippingCharge ?? 0));
 
 const ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // no 0/O/1/I
 export function newOrderId() {
