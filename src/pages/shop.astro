@@ -1,0 +1,143 @@
+---
+import Base from '../layouts/Base.astro';
+import ProductCard from '../components/ProductCard.astro';
+import { COLLECTIONS, PRODUCTS, type CollectionId } from '../data/products';
+import { OFFERS } from '../config';
+
+const groups = (Object.keys(COLLECTIONS) as CollectionId[]).map((id) => ({
+  id,
+  ...COLLECTIONS[id],
+  items: PRODUCTS.filter((p) => p.collection === id),
+}));
+---
+
+<Base title="Shop all candles" description="Shop handmade candles, floral urlis, daisy candles and the Diwali candle collection from Melt & Box Co.">
+  <div class="shop">
+    <header class="wrap shop-head">
+      <p class="eyebrow">Wholesale pricing • Handmade to order</p>
+      <h1>Shop the collection</h1>
+      <p class="lede">
+        Free mini candle above ₹{OFFERS.freeMiniCandleAbove}/- • Free shipping above ₹{OFFERS.freeShippingAbove}/- • Colours, fragrances and sizes can be customised wherever available.
+      </p>
+    </header>
+
+    <!-- CSS-only filter (radio + :has) — no JS -->
+    <div class="filters-bar">
+      <div class="wrap filters" role="radiogroup" aria-label="Filter collection">
+        <input type="radio" name="f" id="f-all" value="all" checked />
+        <label for="f-all">All <span>{PRODUCTS.length}</span></label>
+        {
+          groups.map((g) => (
+            <>
+              <input type="radio" name="f" id={`f-${g.id}`} value={g.id} />
+              <label for={`f-${g.id}`}>
+                {g.id === 'diwali' ? 'Diwali' : 'Candle Collection'} <span>{g.items.length}</span>
+              </label>
+            </>
+          ))
+        }
+      </div>
+    </div>
+
+    {
+      groups.map((g, gi) => (
+        <section class="wrap group" id={g.id} data-group={g.id}>
+          <div class="section-head">
+            <div>
+              <h2>{g.title}</h2>
+              <p>{g.blurb}</p>
+            </div>
+          </div>
+          <div class="grid">
+            {g.items.map((p, i) => (
+              <ProductCard product={p} eager={gi === 0 && i < 2} />
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</Base>
+
+<style>
+  .shop-head {
+    padding-top: clamp(28px, 5vw, 56px);
+    padding-bottom: 12px;
+  }
+  .filters-bar {
+    position: sticky;
+    top: var(--header-h);
+    z-index: 20;
+    background: rgb(251 246 239 / 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--sand);
+  }
+  .filters {
+    display: flex;
+    gap: 8px;
+    padding-block: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filters input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .filters label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1.5px solid var(--sand);
+    border-radius: 999px;
+    background: var(--paper);
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      border-color 0.2s;
+  }
+  .filters label span {
+    font-size: 0.72rem;
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: var(--blush);
+    color: var(--cocoa-2);
+  }
+  .filters input:checked + label {
+    background: var(--cocoa);
+    border-color: var(--cocoa);
+    color: var(--paper);
+  }
+  .filters input:checked + label span {
+    background: rgb(255 255 255 / 0.15);
+    color: var(--gold-2);
+  }
+  .filters input:focus-visible + label {
+    outline: 2px solid var(--rose);
+    outline-offset: 2px;
+  }
+  .group {
+    padding-top: clamp(32px, 5vw, 56px);
+    scroll-margin-top: calc(var(--header-h) + 70px);
+  }
+  .shop:has(#f-candles:checked) [data-group='diwali'],
+  .shop:has(#f-diwali:checked) [data-group='candles'] {
+    display: none;
+  }
+</style>
+
+<script>
+  // Deep links (/shop/#diwali) pre-select the matching filter chip.
+  const sync = () => {
+    const r = document.getElementById(`f-${location.hash.slice(1)}`) as HTMLInputElement | null;
+    if (r) r.checked = true;
+  };
+  sync();
+  addEventListener('hashchange', sync);
+</script>

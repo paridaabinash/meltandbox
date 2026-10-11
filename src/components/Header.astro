@@ -1,0 +1,262 @@
+---
+import Icon from './Icon.astro';
+import { OFFERS, SITE } from '../config';
+
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/shop/', label: 'Shop' },
+  { href: '/shop/#diwali', label: 'Diwali' },
+  { href: '/#custom', label: 'Custom orders' },
+  { href: '/account/', label: 'My orders' },
+];
+---
+
+<div class="announce">
+  <div class="announce-track">
+    <span><Icon name="gift" size={15} /> Free mini candle above ₹{OFFERS.freeMiniCandleAbove}/-</span>
+    <span><Icon name="truck" size={15} /> Free shipping above ₹{OFFERS.freeShippingAbove}/-</span>
+    <span class="hide-sm"><Icon name="tag" size={15} /> Direct wholesale pricing available</span>
+  </div>
+</div>
+
+<header class="header">
+  <div class="wrap header-in">
+    <details class="menu">
+      <summary aria-label="Menu"><span></span><span></span><span></span></summary>
+      <nav class="menu-panel" aria-label="Mobile">
+        {nav.map((n) => <a href={n.href}>{n.label}</a>)}
+        <a href={`https://wa.me/${SITE.whatsapp}`} target="_blank" rel="noopener">WhatsApp us</a>
+      </nav>
+    </details>
+
+    <a href="/" class="brand" aria-label={`${SITE.name} home`}>
+      <span class="brand-name">Melt &amp; Box Co.</span>
+      <span class="brand-tag">{SITE.tagline}</span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+      {nav.map((n) => <a href={n.href} aria-current={path === n.href ? 'page' : undefined}>{n.label}</a>)}
+    </nav>
+
+    <div class="actions">
+      <a href="/account/" class="icon-btn acct-btn" data-account aria-label="My account">
+        <Icon name="user" size={23} />
+        <span class="acct-initial" data-account-initial hidden></span>
+      </a>
+      <button class="icon-btn cart-btn" type="button" data-cart-open aria-label="Open cart">
+        <Icon name="bag" size={24} />
+        <span class="cart-count" data-cart-count hidden>0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<style>
+  .announce {
+    background: var(--cocoa);
+    color: var(--gold-2);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+  }
+  .announce-track {
+    display: flex;
+    justify-content: center;
+    gap: clamp(16px, 5vw, 56px);
+    padding: 8px var(--gutter);
+    white-space: nowrap;
+  }
+  .announce span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  @media (max-width: 560px) {
+    .hide-sm {
+      display: none !important;
+    }
+  }
+
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgb(251 246 239 / 0.86);
+    backdrop-filter: saturate(1.4) blur(12px);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+    border-bottom: 1px solid var(--sand);
+  }
+  .header-in {
+    height: var(--header-h);
+    display: grid;
+    grid-template-columns: 84px 1fr 84px;
+    align-items: center;
+    gap: 6px;
+  }
+  .brand {
+    justify-self: center;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.1;
+  }
+  .brand-name {
+    display: block;
+    white-space: nowrap;
+    font: italic 600 1.45rem/1.1 var(--serif);
+    letter-spacing: 0.01em;
+  }
+  .brand-tag {
+    display: block;
+    white-space: nowrap;
+    font: italic 0.72rem/1.4 var(--serif);
+    color: var(--rose);
+  }
+  .nav {
+    display: none;
+  }
+  .nav a {
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--cocoa-2);
+    padding: 6px 2px;
+    background: linear-gradient(var(--gold), var(--gold)) no-repeat 0 100% / 0 1.5px;
+    transition: background-size 0.25s, color 0.2s;
+  }
+  .nav a:hover,
+  .nav a[aria-current='page'] {
+    color: var(--cocoa);
+    background-size: 100% 1.5px;
+  }
+
+  .actions {
+    justify-self: end;
+    display: flex;
+    gap: 2px;
+  }
+  .icon-btn {
+    position: relative;
+    width: 41px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .icon-btn:hover {
+    background: var(--blush);
+  }
+  .icon-btn {
+    color: var(--cocoa);
+  }
+  .acct-initial {
+    position: absolute;
+    inset: 7px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--cocoa);
+    color: var(--gold-2);
+    font: italic 600 1rem var(--serif);
+  }
+  .acct-initial[hidden] {
+    display: none;
+  }
+  .cart-count {
+    position: absolute;
+    top: 3px;
+    right: 1px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--rose);
+    color: #fff;
+    font: 700 0.68rem/19px var(--sans);
+    text-align: center;
+  }
+  .cart-count.bump {
+    animation: bump 0.4s ease;
+  }
+  @keyframes bump {
+    40% {
+      transform: scale(1.35);
+    }
+  }
+
+  /* mobile menu: <details> — zero JS */
+  .menu summary {
+    list-style: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-content: center;
+    gap: 5px;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  .menu summary::-webkit-details-marker {
+    display: none;
+  }
+  .menu summary span {
+    display: block;
+    width: 20px;
+    height: 1.7px;
+    background: var(--cocoa);
+    border-radius: 2px;
+    transition: transform 0.25s, opacity 0.2s;
+  }
+  .menu[open] summary span:nth-child(1) {
+    transform: translateY(6.7px) rotate(45deg);
+  }
+  .menu[open] summary span:nth-child(2) {
+    opacity: 0;
+  }
+  .menu[open] summary span:nth-child(3) {
+    transform: translateY(-6.7px) rotate(-45deg);
+  }
+  .menu-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--header-h);
+    display: grid;
+    padding: 8px var(--gutter) 20px;
+    background: var(--cream);
+    border-bottom: 1px solid var(--sand);
+    box-shadow: var(--shadow-lg);
+  }
+  .menu-panel a {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--sand);
+    text-decoration: none;
+    font: italic 600 1.25rem var(--serif);
+  }
+
+  @media (max-width: 380px) {
+    .brand-name {
+      font-size: 1.25rem;
+    }
+  }
+  @media (min-width: 900px) {
+    .menu {
+      display: none;
+    }
+    .header-in {
+      grid-template-columns: auto 1fr auto;
+    }
+    .brand {
+      justify-self: start;
+      text-align: left;
+    }
+    .nav {
+      display: flex;
+      gap: 28px;
+      justify-self: end;
+      margin-right: 8px;
+    }
+  }
+</style>

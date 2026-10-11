@@ -1,0 +1,32 @@
+---
+// The ONLY way product photos should be rendered (see CLAUDE.md → Images).
+import { Picture } from 'astro:assets';
+import { photo } from '../lib/images';
+
+interface Props {
+  slug: string;
+  alt: string;
+  sizes: string;
+  tone?: string;
+  eager?: boolean;
+  class?: string;
+}
+const { slug, alt, sizes, tone, eager = false, class: cls } = Astro.props;
+const src = photo(slug);
+const widths = [240, 360, 480, 720].filter((w) => w <= src.width);
+if (!widths.includes(src.width) && src.width < 720) widths.push(src.width);
+---
+
+<Picture
+  src={src}
+  alt={alt}
+  widths={widths}
+  sizes={sizes}
+  formats={['avif', 'webp']}
+  quality={62}
+  loading={eager ? 'eager' : 'lazy'}
+  decoding={eager ? 'sync' : 'async'}
+  fetchpriority={eager ? 'high' : 'auto'}
+  class={cls}
+  style={tone ? `background:${tone}` : undefined}
+/>

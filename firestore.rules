@@ -1,0 +1,87 @@
+rules_version = '2';
+
+// Melt & Box Co. — Firestore security rules.
+// Publish: Firebase Console → Firestore Database → Rules → paste → Publish
+//      or: npx firebase-tools deploy --only firestore:rules
+//
+// Data:
+//   users/{uid}       a customer's saved checkout details (only they + the owner can read)
+//   orders/{orderId}  one order; `uid` = customer who placed it
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Owner access (shop owner's Google account UID). To add another admin, append their UID (shown at /admin) and publish.
+    function isAdmin() {
+      return request.auth != null && request.auth.uid in ['DEV7zs6GWjSejA2PpnrbQsQQRUh1'];
+    }
+
+    function isUser(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function str(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    // Field checks shared by orders.customer and users/{uid}.
+    function validContactFields(c) {
+      return str(c.name, 2, 80)
+        && str(c.phone, 10, 10) && c.phone.matches('[6-9][0-9]{9}')
+        && c.whatsapp is bool
+        && str(c.email, 0, 120)
+        && str(c.address, 8, 400)
+        && str(c.city, 1, 60)
+        && str(c.pincode, 6, 6) && c.pincode.matches('[1-9][0-9]{5}')
+        && str(c.state, 0, 60);
+    }
+
+    function validCustomer(c) {
+      let keys = ['name', 'phone', 'whatsapp', 'email', 'address', 'city', 'pincode', 'state'];
+      return c is map && c.keys().hasOnly(keys) && c.keys().hasAll(keys) && validContactFields(c);
+    }
+
+    function validProfile(d) {
+      let keys = ['name', 'phone', 'whatsapp', 'email', 'address', 'city', 'pincode', 'state', 'updatedAt'];
+      return d.keys().hasOnly(keys) && d.keys().hasAll(keys)
+        && validContactFields(d)
+        && d.updatedAt == request.time;
+    }
+
+    function validNewOrder(id) {
+      let d = request.resource.data;
+      let keys = ['uid', 'customer', 'items', 'subtotal', 'freeMiniCandle', 'freeShipping', 'contactConsent', 'note', 'status', 'createdAt'];
+      return id.matches('MB-[2-9A-HJ-NP-Z]{10}')
+        && d.keys().hasOnly(keys) && d.keys().hasAll(keys)
+        && d.uid == request.auth.uid
+        && validCustomer(d.customer)
+        && d.items is list && d.items.size() >= 1 && d.items.size() <= 60
+        && d.subtotal is int && d.subtotal > 0 && d.subtotal <= 500000
+        // keep in sync with OFFERS in src/config.ts
+        && d.freeMiniCandle == (d.subtotal >= 599)
+        && d.freeShipping == (d.subtotal >= 999)
+        && d.contactConsent == true
+        && str(d.note, 0, 1000)
+        && d.status == 'new'
+        && d.createdAt == request.time;
+    }
+
+    match /users/{uid} {
+      allow get: if isUser(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isUser(uid) && validProfile(request.resource.data);
+      allow delete: if isUser(uid) || isAdmin();
+    }
+
+    match /orders/{orderId} {
+      // Customers read only their own orders; the owner reads all.
+      allow get, list: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if request.auth != null && validNewOrder(orderId);
+      allow update, delete: if isAdmin();
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

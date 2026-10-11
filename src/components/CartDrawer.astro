@@ -1,0 +1,165 @@
+---
+// Native <dialog> drawer; contents rendered by src/scripts/cart.ts from localStorage.
+import Icon from './Icon.astro';
+import { OFFERS } from '../config';
+---
+
+<dialog class="drawer" data-cart-drawer aria-label="Your cart">
+  <div class="drawer-in">
+    <div class="d-head">
+      <h2>Your cart</h2>
+      <button type="button" class="d-close" data-cart-close aria-label="Close cart"><Icon name="close" /></button>
+    </div>
+
+    <div class="d-progress" data-cart-progress>
+      <p data-cart-progress-text>Add items worth ₹{OFFERS.freeMiniCandleAbove} for a free mini candle</p>
+      <div class="bar"><span data-cart-bar></span><i style={`left:${(OFFERS.freeMiniCandleAbove / OFFERS.freeShippingAbove) * 100}%`} title="Free mini candle"></i></div>
+    </div>
+
+    <ul class="d-list" data-cart-list></ul>
+
+    <div class="d-empty" data-cart-empty>
+      <Icon name="flame" size={40} />
+      <p class="serif">Your cart is waiting for a little glow.</p>
+      <a href="/shop/" class="btn btn-sm">Browse candles</a>
+    </div>
+
+    <div class="d-foot" data-cart-foot>
+      <div class="d-row"><span>Subtotal</span><strong data-cart-subtotal>₹0</strong></div>
+      <p class="d-small muted">Shipping is free above ₹{OFFERS.freeShippingAbove}. Below that, charges are shared when we confirm your order.</p>
+      <a href="/checkout/" class="btn btn-rose btn-block">Checkout <Icon name="arrow" /></a>
+    </div>
+  </div>
+</dialog>
+
+<script src="../scripts/cart.ts"></script>
+
+<style>
+  .drawer {
+    margin: 0 0 0 auto;
+    width: min(420px, 100vw);
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding: 0;
+    border: 0;
+    background: var(--cream);
+    color: var(--cocoa);
+    box-shadow: var(--shadow-lg);
+  }
+  .drawer[open] {
+    animation: slide-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .drawer::backdrop {
+    background: rgb(40 25 20 / 0.42);
+    backdrop-filter: blur(2px);
+  }
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  .drawer-in {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .d-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 10px;
+  }
+  .d-head h2 {
+    font-size: 1.6rem;
+    margin: 0;
+  }
+  .d-close {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--blush);
+    cursor: pointer;
+  }
+  .d-progress {
+    margin: 0 20px 8px;
+    padding: 12px 14px;
+    background: var(--blush);
+    border-radius: var(--r-sm);
+    font-size: 0.85rem;
+  }
+  .d-progress p {
+    margin: 0 0 8px;
+  }
+  .bar {
+    position: relative;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--sand);
+  }
+  .bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--gold), var(--rose));
+    transition: width 0.4s ease;
+  }
+  .bar i {
+    position: absolute;
+    top: -3px;
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 2px solid var(--gold);
+  }
+  .d-list {
+    flex: 1;
+    overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    padding: 4px 20px;
+  }
+  .d-empty {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    color: var(--cocoa-3);
+    padding: 20px;
+  }
+  .d-empty .serif {
+    font-size: 1.2rem;
+    color: var(--cocoa-2);
+  }
+  .drawer.is-empty .d-empty {
+    display: flex;
+  }
+  .drawer.is-empty .d-list,
+  .drawer.is-empty .d-foot,
+  .drawer.is-empty .d-progress {
+    display: none;
+  }
+  .d-foot {
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--sand);
+    background: var(--paper);
+  }
+  .d-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.05rem;
+  }
+  .d-small {
+    font-size: 0.78rem;
+    margin: 4px 0 12px;
+  }
+</style>

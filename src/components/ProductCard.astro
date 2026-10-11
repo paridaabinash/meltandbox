@@ -1,0 +1,160 @@
+---
+import ProductImage from './ProductImage.astro';
+import Icon from './Icon.astro';
+import { priceLabel, type Product } from '../data/products';
+import { thumbUrl } from '../lib/images';
+
+interface Props {
+  product: Product;
+  sizes?: string;
+  eager?: boolean;
+}
+const { product: p, sizes = '(min-width: 1060px) 270px, (min-width: 760px) 31vw, 47vw', eager = false } = Astro.props;
+const href = `/product/${p.slug}/`;
+const quick = p.variants.length === 1 ? p.variants[0] : null;
+const img = quick ? await thumbUrl(p.slug) : '';
+---
+
+<article class="pc" data-c={p.collection}>
+  <a href={href} class="pc-media" tabindex="-1" aria-hidden="true">
+    <ProductImage slug={p.slug} alt={p.name} sizes={sizes} tone={p.tone} eager={eager} class="pc-img" />
+    {p.design && <span class="pc-design">Design {String(p.design).padStart(2, '0')}</span>}
+  </a>
+  <div class="pc-body">
+    <h3 class="pc-name"><a href={href}>{p.name}</a></h3>
+    <p class="pc-price">
+      {p.variants.length > 1 && <span class="from">from</span>}
+      {priceLabel(p)}
+    </p>
+    {
+      quick ? (
+        <button
+          type="button"
+          class="pc-add"
+          data-add
+          data-slug={p.slug}
+          data-v={quick.id}
+          data-vl={quick.label}
+          data-name={p.name}
+          data-price={quick.price}
+          data-img={img}
+          aria-label={`Add ${p.name} to cart`}
+        >
+          <Icon name="plus" size={18} />
+        </button>
+      ) : (
+        <a href={href} class="pc-add pc-choose" aria-label={`Choose options for ${p.name}`}>
+          <Icon name="arrow" size={18} />
+        </a>
+      )
+    }
+  </div>
+</article>
+
+<style>
+  .pc {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    border-radius: var(--r);
+    overflow: hidden;
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .pc:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+  .pc-media {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--blush);
+  }
+  .pc-media :global(.pc-img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .pc:hover .pc-media :global(.pc-img) {
+    transform: scale(1.045);
+  }
+  .pc-design {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgb(255 253 249 / 0.88);
+    backdrop-filter: blur(6px);
+    font: 700 0.62rem/1.6 var(--sans);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--rose);
+  }
+  .pc-body {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 52px 14px 14px;
+  }
+  .pc-name {
+    font: 600 0.92rem/1.3 var(--sans);
+    font-style: normal;
+    letter-spacing: 0;
+    margin: 0 0 4px;
+  }
+  .pc-name a {
+    text-decoration: none;
+  }
+  .pc-name a::after {
+    /* whole card clickable, add button sits above */
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .pc-price {
+    margin: auto 0 0;
+    font-weight: 600;
+    color: var(--rose);
+    font-size: 0.95rem;
+  }
+  .from {
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--cocoa-3);
+    margin-right: 3px;
+  }
+  .pc-add {
+    position: absolute;
+    right: 10px;
+    bottom: 12px;
+    z-index: 1;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--cocoa);
+    color: var(--paper);
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      transform 0.2s;
+  }
+  .pc-add:hover {
+    background: var(--rose);
+    transform: scale(1.08);
+  }
+  .pc-choose {
+    background: var(--blush-2);
+    color: var(--cocoa);
+  }
+</style>

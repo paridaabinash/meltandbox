@@ -1,0 +1,621 @@
+---
+import Base from '../layouts/Base.astro';
+import ProductCard from '../components/ProductCard.astro';
+import ProductImage from '../components/ProductImage.astro';
+import Icon from '../components/Icon.astro';
+import { BESTSELLERS, COLLECTIONS, PRODUCTS, bySlug } from '../data/products';
+import { OFFERS, SITE, waLink } from '../config';
+import { getImage } from 'astro:assets';
+import { photo } from '../lib/images';
+
+const best = BESTSELLERS.map((s) => bySlug(s)!);
+const diwali = PRODUCTS.filter((p) => p.collection === 'diwali');
+const candles = PRODUCTS.filter((p) => p.collection === 'candles');
+const og = await getImage({ src: photo('diwali-hero'), width: 720, format: 'jpg', quality: 70 });
+
+const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festive Hampers', 'Personal Gifting', 'Custom Orders'];
+---
+
+<Base image={og.src}>
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap hero-in">
+      <div class="hero-copy">
+        <p class="eyebrow">Handmade candles • Customised gift hampers</p>
+        <h1>Made for<br /><span class="accent">thoughtful</span> gifting</h1>
+        <p class="lede">Small details, warm moments, and candles made to be remembered.</p>
+        <div class="hero-cta">
+          <a href="/shop/" class="btn">Shop the collection <Icon name="arrow" /></a>
+          <a href="/shop/#diwali" class="btn btn-ghost"><Icon name="flame" /> Diwali collection</a>
+        </div>
+        <ul class="hero-perks">
+          <li><Icon name="gift" size={18} /> Free mini candle above ₹{OFFERS.freeMiniCandleAbove}/-</li>
+          <li><Icon name="truck" size={18} /> Free shipping above ₹{OFFERS.freeShippingAbove}/-</li>
+        </ul>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <div class="arch arch-main">
+          <ProductImage slug="diwali-hero" alt="" sizes="(min-width: 900px) 360px, 58vw" tone="#ba6b4e" eager />
+        </div>
+        <div class="arch arch-a">
+          <ProductImage slug="golden-hour" alt="" sizes="(min-width: 900px) 200px, 32vw" tone="#a69b85" />
+        </div>
+        <div class="arch arch-b">
+          <ProductImage slug="blush-bloom" alt="" sizes="(min-width: 900px) 200px, 32vw" tone="#7b472e" />
+        </div>
+        <span class="spark s1"><Icon name="sparkle" size={20} /></span>
+        <span class="spark s2"><Icon name="sparkle" size={14} /></span>
+        <div class="flame-badge">
+          <span class="flame"><i></i></span>
+          <span><b>100%</b> handmade<br />with love</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Perks strip ── -->
+  <section class="perks">
+    <div class="wrap perks-in">
+      <div><Icon name="heart" /><span><b>Handmade with love</b>Every candle, every detail</span></div>
+      <div><Icon name="gift" /><span><b>Free mini candle</b>On orders above ₹{OFFERS.freeMiniCandleAbove}/-</span></div>
+      <div><Icon name="truck" /><span><b>Free shipping</b>On orders above ₹{OFFERS.freeShippingAbove}/-</span></div>
+      <div><Icon name="tag" /><span><b>Wholesale pricing</b>Direct, for bulk &amp; resellers</span></div>
+    </div>
+  </section>
+
+  <!-- ── Diwali ── -->
+  <section class="section diwali" id="diwali-home">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Festive collection</p>
+          <h2>{COLLECTIONS.diwali.title}</h2>
+          <p>A little light, a lot of warmth. Perfect for festive hampers, corporate gifting, return gifts and guest presents.</p>
+        </div>
+        <a href="/shop/#diwali" class="btn btn-sm btn-ghost">All {diwali.length} designs <Icon name="arrow" /></a>
+      </div>
+    </div>
+    <div class="rail" role="list">
+      {
+        diwali.slice(0, 12).map((p) => (
+          <div class="rail-item" role="listitem">
+            <ProductCard product={p} sizes="(min-width: 760px) 260px, 62vw" />
+          </div>
+        ))
+      }
+      <a href="/shop/#diwali" class="rail-more rail-item">
+        <span class="serif">See all {diwali.length} Diwali designs</span>
+        <Icon name="arrow" size={28} />
+      </a>
+    </div>
+  </section>
+
+  <!-- ── Note ── -->
+  <section class="wrap">
+    <div class="note big-note">
+      <p class="eyebrow">A little note from us ♥</p>
+      <p class="serif note-text">
+        Every candle is handmade with love. Colours, fragrances, sizes, and certain design details can be customised wherever available.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Bestsellers ── -->
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Loved by our customers</p>
+          <h2>Little glows, big smiles</h2>
+        </div>
+        <a href="/shop/" class="btn btn-sm btn-ghost">Shop all <Icon name="arrow" /></a>
+      </div>
+      <div class="grid">
+        {best.map((p) => <ProductCard product={p} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Collections ── -->
+  <section class="wrap collections">
+    <a href="/shop/#candles" class="col-card">
+      <ProductImage slug="daisy-urli-bowl-pearls" alt="" sizes="(min-width: 760px) 560px, 92vw" tone="#8d6a5a" class="col-img" />
+      <div class="col-copy">
+        <span class="badge">{candles.length} pieces</span>
+        <h3>{COLLECTIONS.candles.title}</h3>
+        <p>{COLLECTIONS.candles.blurb}</p>
+        <span class="col-link">Explore <Icon name="arrow" size={18} /></span>
+      </div>
+    </a>
+    <a href="/shop/#diwali" class="col-card">
+      <ProductImage slug="laxmi-padam-lotus-urli" alt="" sizes="(min-width: 760px) 560px, 92vw" tone="#5f8499" class="col-img" />
+      <div class="col-copy">
+        <span class="badge">{diwali.length} designs</span>
+        <h3>{COLLECTIONS.diwali.title}</h3>
+        <p>A little light, a lot of warmth — urlis, diyas, tealights and daisy sets.</p>
+        <span class="col-link">Explore <Icon name="arrow" size={18} /></span>
+      </div>
+    </a>
+  </section>
+
+  <!-- ── Customisation ── -->
+  <section class="section" id="custom">
+    <div class="wrap custom">
+      <div class="custom-copy">
+        <p class="eyebrow">Customisation</p>
+        <h2>Create your Diwali your way.</h2>
+        <p class="lede">
+          Choose a design, mix and match elements, or share your own reference. We can customise the look to suit your gifting occasion.
+        </p>
+        <p class="muted">Custom colours, scents, decor, and gifting themes are available wherever possible.</p>
+        <div class="hero-cta">
+          <a href={waLink('Hi Melt & Box Co.! I would like to place a custom / bulk order.')} class="btn btn-wa" target="_blank" rel="noopener">
+            <Icon name="whatsapp" /> Chat on WhatsApp
+          </a>
+          <a href={`tel:${SITE.phone.replace(/\s/g, '')}`} class="btn btn-ghost"><Icon name="phone" /> {SITE.phone}</a>
+        </div>
+      </div>
+      <div class="custom-side">
+        <div class="card perfect">
+          <p class="serif perfect-h">Perfect for</p>
+          <ul>{occasions.map((o) => <li class="chip"><span class="dot"></span>{o}</li>)}</ul>
+        </div>
+        <div class="note">
+          <p class="serif please-h">Please note</p>
+          <ul class="please">
+            <li>Prices may vary with jar/urli/candle/sets size and custom decor.</li>
+            <li>Fragile items should be handled carefully during display.</li>
+            <li>For festive or large orders, please contact directly.</li>
+            <li>Designs shown are references. Colours, fragrances, embellishments, packaging and final detailing can be customised based on your requirements.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── How ordering works ── -->
+  <section class="section how-wrap">
+    <div class="wrap">
+      <div class="center" style="max-width:60ch">
+        <p class="eyebrow">Simple &amp; personal</p>
+        <h2>How ordering works</h2>
+        <hr class="rule center" />
+      </div>
+      <ol class="how">
+        <li><span>1</span><b>Pick your favourites</b>Add candles to your cart and choose sets or packs.</li>
+        <li><span>2</span><b>Sign in &amp; order</b>Sign in with Google, add your WhatsApp number and any customisation wishes.</li>
+        <li><span>3</span><b>We confirm on WhatsApp</b>We message you to confirm the order and share payment details — no online payment needed.</li>
+        <li><span>4</span><b>Packed with love</b>Handmade, boxed and shipped — with updates on WhatsApp.</li>
+      </ol>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* hero */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(32px, 6vw, 80px) clamp(48px, 7vw, 96px);
+  }
+  .glow {
+    position: absolute;
+    inset: -20% -10% auto auto;
+    width: 70vw;
+    height: 70vw;
+    max-width: 820px;
+    max-height: 820px;
+    background:
+      radial-gradient(closest-side, rgb(246 198 107 / 0.35), transparent 70%),
+      radial-gradient(closest-side at 30% 70%, rgb(217 139 126 / 0.22), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-in {
+    position: relative;
+    display: grid;
+    gap: 40px;
+    align-items: center;
+  }
+  @media (min-width: 900px) {
+    .hero-in {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+  .accent {
+    color: var(--rose);
+    position: relative;
+    white-space: nowrap;
+  }
+  .accent::after {
+    content: '';
+    position: absolute;
+    left: 2%;
+    right: 2%;
+    bottom: 0.04em;
+    height: 0.14em;
+    background: var(--gold-2);
+    border-radius: 99px;
+    z-index: -1;
+  }
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .hero-perks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    margin: 28px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.88rem;
+    color: var(--cocoa-2);
+  }
+  .hero-perks li {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .hero-perks :global(svg) {
+    color: var(--gold);
+  }
+
+  .hero-art {
+    position: relative;
+    aspect-ratio: 1 / 1.02;
+    width: min(100%, 540px);
+    justify-self: center;
+  }
+  .arch {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 999px 999px var(--r-lg) var(--r-lg);
+    border: 6px solid var(--paper);
+    box-shadow: var(--shadow-lg);
+    background: var(--blush);
+  }
+  .arch :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .arch-main {
+    left: 22%;
+    top: 0;
+    width: 56%;
+    height: 82%;
+    z-index: 2;
+  }
+  .arch-a {
+    left: 0;
+    top: 30%;
+    width: 33%;
+    height: 50%;
+    transform: rotate(-5deg);
+  }
+  .arch-b {
+    right: 0;
+    top: 22%;
+    width: 33%;
+    height: 50%;
+    transform: rotate(5deg);
+  }
+  .spark {
+    position: absolute;
+    color: var(--gold);
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  .s1 {
+    top: 6%;
+    left: 12%;
+  }
+  .s2 {
+    top: 12%;
+    right: 14%;
+    animation-delay: 1.2s;
+  }
+  @keyframes twinkle {
+    50% {
+      opacity: 0.3;
+      transform: scale(0.7) rotate(20deg);
+    }
+  }
+  .flame-badge {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: 4%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px 10px 12px;
+    border-radius: 999px;
+    background: var(--paper);
+    box-shadow: var(--shadow-lg);
+    font-size: 0.8rem;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .flame {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--blush);
+    display: grid;
+    place-items: center;
+  }
+  .flame i {
+    width: 10px;
+    height: 16px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    background: radial-gradient(ellipse at 50% 70%, #fff6d8 0 25%, var(--flame) 45%, #e8893c 100%);
+    box-shadow: 0 0 12px 3px rgb(246 198 107 / 0.6);
+    transform-origin: 50% 90%;
+    animation: flicker 1.6s ease-in-out infinite alternate;
+  }
+  @keyframes flicker {
+    0% {
+      transform: scale(1) rotate(-2deg);
+    }
+    40% {
+      transform: scale(1.08, 0.94) rotate(2deg);
+    }
+    70% {
+      transform: scale(0.95, 1.06) rotate(-1deg);
+    }
+    100% {
+      transform: scale(1.04) rotate(1.5deg);
+    }
+  }
+
+  /* perks */
+  .perks {
+    border-block: 1px solid var(--sand);
+    background: var(--paper);
+  }
+  .perks-in {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px 16px;
+    padding-block: 22px;
+  }
+  @media (min-width: 900px) {
+    .perks-in {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .perks-in div {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--cocoa-3);
+    line-height: 1.35;
+  }
+  .perks-in :global(svg) {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 9px;
+    border-radius: 50%;
+    background: var(--blush);
+    color: var(--rose);
+  }
+  .perks-in b {
+    display: block;
+    color: var(--cocoa);
+    font-size: 0.9rem;
+  }
+
+  /* diwali rail */
+  .diwali {
+    background:
+      radial-gradient(1200px 400px at 80% 0%, rgb(246 198 107 / 0.18), transparent 70%),
+      linear-gradient(var(--cream), var(--blush) 60%, var(--cream));
+  }
+  .rail {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(62vw, 260px);
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    --rail-pad: max(var(--gutter), calc((100vw - var(--wrap)) / 2 + var(--gutter)));
+    scroll-padding-inline: var(--rail-pad);
+    padding: 8px var(--rail-pad) 24px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sand) transparent;
+  }
+  .rail-item {
+    scroll-snap-align: start;
+    display: flex;
+  }
+  .rail-item > :global(*) {
+    flex: 1;
+  }
+  .rail-more {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    padding: 24px;
+    border-radius: var(--r);
+    border: 1.5px dashed var(--gold);
+    text-decoration: none;
+    color: var(--rose);
+    font-size: 1.3rem;
+  }
+
+  /* note */
+  .big-note {
+    text-align: center;
+    padding-block: clamp(32px, 5vw, 56px);
+  }
+  .note-text {
+    font-size: clamp(1.2rem, 2.6vw, 1.7rem);
+    line-height: 1.45;
+    max-width: 40ch;
+    margin: 0 auto;
+  }
+
+  /* collections */
+  .collections {
+    display: grid;
+    gap: 20px;
+  }
+  @media (min-width: 760px) {
+    .collections {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .col-card {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 4.4;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    text-decoration: none;
+    color: #fff;
+    isolation: isolate;
+  }
+  .col-card :global(.col-img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .col-card:hover :global(.col-img) {
+    transform: scale(1.05);
+  }
+  .col-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(transparent 35%, rgb(40 24 18 / 0.82));
+  }
+  .col-copy {
+    position: absolute;
+    inset: auto 0 0;
+    padding: clamp(20px, 3vw, 32px);
+  }
+  .col-copy .badge {
+    background: var(--gold-2);
+    color: var(--cocoa);
+  }
+  .col-copy h3 {
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    margin: 12px 0 6px;
+  }
+  .col-copy p {
+    color: #f1e6dc;
+    max-width: 40ch;
+    font-size: 0.92rem;
+  }
+  .col-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    border-bottom: 1.5px solid var(--gold-2);
+  }
+
+  /* custom */
+  .custom {
+    display: grid;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (min-width: 900px) {
+    .custom {
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+    }
+  }
+  .custom-side {
+    display: grid;
+    gap: 18px;
+  }
+  .perfect {
+    padding: 24px;
+  }
+  .perfect-h,
+  .please-h {
+    font-size: 1.3rem;
+    margin: 0 0 12px;
+  }
+  .perfect ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .please {
+    margin: 0;
+    padding-left: 1.1em;
+    color: var(--cocoa-2);
+    font-size: 0.92rem;
+  }
+  .please li {
+    margin-bottom: 6px;
+  }
+  .please li::marker {
+    color: var(--gold);
+  }
+
+  /* how */
+  .how-wrap {
+    background: var(--paper);
+    border-top: 1px solid var(--sand);
+  }
+  .how {
+    display: grid;
+    gap: 16px;
+    margin: 32px 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: s;
+  }
+  @media (min-width: 760px) {
+    .how {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .how li {
+    padding: 22px;
+    border-radius: var(--r);
+    background: var(--cream);
+    border: 1px solid var(--sand);
+    font-size: 0.9rem;
+    color: var(--cocoa-2);
+  }
+  .how span {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 12px;
+    border-radius: 50%;
+    background: var(--cocoa);
+    color: var(--gold-2);
+    font: italic 600 1.1rem var(--serif);
+  }
+  .how b {
+    display: block;
+    color: var(--cocoa);
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
+</style>

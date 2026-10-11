@@ -1,0 +1,357 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getImage } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import ProductImage from '../../components/ProductImage.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import Icon from '../../components/Icon.astro';
+import { COLLECTIONS, PRODUCTS, formatINR, priceLabel, type Product } from '../../data/products';
+import { OFFERS, SITE, waLink } from '../../config';
+import { photo, thumbUrl } from '../../lib/images';
+
+export const getStaticPaths = (() => PRODUCTS.map((p) => ({ params: { slug: p.slug }, props: { p } }))) satisfies GetStaticPaths;
+
+const { p } = Astro.props as { p: Product };
+const col = COLLECTIONS[p.collection];
+const thumb = await thumbUrl(p.slug);
+const og = await getImage({ src: photo(p.slug), width: 600, format: 'jpg', quality: 70 });
+
+const family = p.family ? PRODUCTS.filter((x) => x.family === p.family && x.slug !== p.slug) : [];
+const familyThumbs = await Promise.all(family.map((f) => thumbUrl(f.slug)));
+// Next 4 pieces after this one in the same collection (wrapping), skipping its colour family.
+const sameCol = PRODUCTS.filter((x) => x.collection === p.collection);
+const at = sameCol.indexOf(p);
+const more = [...sameCol.slice(at + 1), ...sameCol.slice(0, at)]
+  .filter((x) => !p.family || x.family !== p.family)
+  .slice(0, 4);
+const v0 = p.variants[0];
+const pageUrl = new URL(`/product/${p.slug}/`, Astro.site ?? SITE.url).href;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: p.name,
+  image: new URL(og.src, Astro.site ?? SITE.url).href,
+  brand: { '@type': 'Brand', name: SITE.name },
+  offers: {
+    '@type': 'Offer',
+    priceCurrency: 'INR',
+    price: v0.price,
+    availability: 'https://schema.org/InStock',
+    url: pageUrl,
+  },
+};
+---
+
+<Base title={p.name} description={`${p.name} — ${priceLabel(p)}. Handmade by ${SITE.name}. ${p.setInfo ?? col.blurb}`} image={og.src}>
+  <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+
+  <nav class="wrap crumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span>/</span><a href={`/shop/#${p.collection}`}>{col.title}</a>
+  </nav>
+
+  <section class="wrap pd">
+    <div class="pd-media">
+      <ProductImage slug={p.slug} alt={p.name} sizes="(min-width: 900px) 560px, 100vw" tone={p.tone} eager class="pd-img" />
+      {p.design && <span class="pd-design">Design {String(p.design).padStart(2, '0')} of 23</span>}
+    </div>
+
+    <div class="pd-info">
+      <p class="eyebrow">{col.title}</p>
+      <h1>{p.name}</h1>
+      <p class="pd-price">{priceLabel(p)}</p>
+      {p.setInfo && <p class="pd-set">{p.setInfo}</p>}
+
+      <form data-add-form data-slug={p.slug} data-name={p.name} data-img={thumb} class="pd-form">
+        {
+          p.variants.length > 1 && (
+            <fieldset class="variants">
+              <legend>Choose</legend>
+              {p.variants.map((v, i) => (
+                <label class="variant">
+                  <input type="radio" name="variant" value={v.id} data-price={v.price} data-label={v.label} checked={i === 0} />
+                  <span>
+                    <b>{v.label}</b>
+                    {formatINR(v.price)}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          )
+        }
+        {p.variants.length === 1 && <input type="radio" name="variant" value={v0.id} data-price={v0.price} data-label={v0.label} checked hidden />}
+
+        <div class="buy-row">
+          <div class="qty qty-lg">
+            <button type="button" data-step="-1" aria-label="Decrease quantity">−</button>
+            <input type="number" name="qty" value="1" min="1" max="99" inputmode="numeric" aria-label="Quantity" />
+            <button type="button" data-step="1" aria-label="Increase quantity">+</button>
+          </div>
+          <button type="submit" class="btn btn-rose buy-btn">
+            <Icon name="bag" size={20} /> Add to cart · <output data-price-display>{formatINR(v0.price)}</output>
+          </button>
+        </div>
+      </form>
+
+      <a
+        class="btn btn-ghost btn-block wa-btn"
+        target="_blank"
+        rel="noopener"
+        href={waLink(`Hi Melt & Box Co.! I'm interested in "${p.name}" (${priceLabel(p)}). ${pageUrl}`)}
+      >
+        <Icon name="whatsapp" /> Ask / customise on WhatsApp
+      </a>
+
+      {
+        family.length > 0 && (
+          <div class="family">
+            <p class="fam-h">Also available in</p>
+            <div class="fam-list">
+              {family.map((f, i) => (
+                <a href={`/product/${f.slug}/`} title={f.name}>
+                  <img src={familyThumbs[i]} width="60" height="60" alt={f.name} loading="lazy" decoding="async" style={`background:${f.tone}`} />
+                </a>
+              ))}
+            </div>
+          </div>
+        )
+      }
+
+      <ul class="pd-perks">
+        <li><Icon name="heart" size={18} /> Handmade with love — colours, fragrances &amp; details customisable wherever available</li>
+        <li><Icon name="gift" size={18} /> Free mini candle on orders above ₹{OFFERS.freeMiniCandleAbove}/-</li>
+        <li><Icon name="truck" size={18} /> Free shipping on orders above ₹{OFFERS.freeShippingAbove}/-</li>
+      </ul>
+
+      {
+        p.notes && (
+          <details class="pd-notes" open>
+            <summary>Please note</summary>
+            <ul>
+              {p.notes.map((n) => <li>{n}</li>)}
+              <li>Fragile items should be handled carefully during display.</li>
+              <li>For festive or large orders, please contact directly.</li>
+            </ul>
+          </details>
+        )
+      }
+    </div>
+  </section>
+
+  {
+    more.length > 0 && (
+      <section class="section wrap">
+        <div class="section-head">
+          <h2>You may also love</h2>
+          <a href={`/shop/#${p.collection}`} class="btn btn-sm btn-ghost">View collection <Icon name="arrow" /></a>
+        </div>
+        <div class="grid">
+          {more.map((m) => <ProductCard product={m} />)}
+        </div>
+      </section>
+    )
+  }
+</Base>
+
+<style>
+  .crumbs {
+    display: flex;
+    gap: 8px;
+    padding-block: 18px 6px;
+    font-size: 0.82rem;
+    color: var(--cocoa-3);
+  }
+  .crumbs a {
+    text-decoration: none;
+  }
+  .crumbs a:hover {
+    color: var(--rose);
+  }
+  .pd {
+    display: grid;
+    gap: clamp(20px, 4vw, 56px);
+    padding-bottom: 24px;
+  }
+  @media (min-width: 900px) {
+    .pd {
+      grid-template-columns: 1.05fr 1fr;
+      align-items: start;
+    }
+    .pd-media {
+      position: sticky;
+      top: calc(var(--header-h) + 20px);
+    }
+  }
+  .pd-media {
+    position: relative;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--blush);
+    box-shadow: var(--shadow-lg);
+    aspect-ratio: 4 / 5;
+  }
+  .pd-media :global(.pd-img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .pd-design {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgb(255 253 249 / 0.9);
+    font: 700 0.68rem/1.6 var(--sans);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--rose);
+  }
+  .pd-info h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+  }
+  .pd-price {
+    font: italic 600 1.7rem var(--serif);
+    color: var(--rose);
+    margin-bottom: 6px;
+  }
+  .pd-set {
+    color: var(--cocoa-2);
+    font-size: 0.92rem;
+  }
+  .pd-form {
+    margin-top: 20px;
+  }
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    border: 0;
+    padding: 0;
+    margin: 0 0 18px;
+  }
+  .variants legend {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cocoa-3);
+    margin-bottom: 8px;
+  }
+  .variant input {
+    position: absolute;
+    opacity: 0;
+  }
+  .variant span {
+    display: block;
+    padding: 10px 12px;
+    border: 1.5px solid var(--sand);
+    border-radius: var(--r-sm);
+    background: var(--paper);
+    font-size: 0.85rem;
+    color: var(--cocoa-2);
+    cursor: pointer;
+    transition:
+      border-color 0.2s,
+      background 0.2s;
+  }
+  .variant b {
+    display: block;
+    color: var(--cocoa);
+    font-size: 0.9rem;
+  }
+  .variant input:checked + span {
+    border-color: var(--cocoa);
+    background: var(--blush);
+    box-shadow: inset 0 0 0 1px var(--cocoa);
+  }
+  .variant input:focus-visible + span {
+    outline: 2px solid var(--rose);
+    outline-offset: 2px;
+  }
+  .buy-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .qty-lg button {
+    width: 44px;
+    height: 48px;
+  }
+  .qty-lg input {
+    width: 40px;
+    font-size: 1rem;
+  }
+  .buy-btn {
+    flex: 1;
+    min-width: 200px;
+  }
+  .wa-btn {
+    margin-top: 10px;
+  }
+  .family {
+    margin-top: 22px;
+  }
+  .fam-h {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cocoa-3);
+    margin-bottom: 8px;
+  }
+  .fam-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .fam-list img {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid var(--paper);
+    box-shadow: 0 0 0 1px var(--sand);
+    transition: box-shadow 0.2s;
+  }
+  .fam-list a:hover img {
+    box-shadow: 0 0 0 2px var(--rose);
+  }
+  .pd-perks {
+    list-style: none;
+    margin: 24px 0 0;
+    padding: 18px 0 0;
+    border-top: 1px solid var(--sand);
+    display: grid;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: var(--cocoa-2);
+  }
+  .pd-perks li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .pd-perks :global(svg) {
+    color: var(--gold);
+    flex: none;
+    margin-top: 2px;
+  }
+  .pd-notes {
+    margin-top: 18px;
+    padding: 14px 18px;
+    border-radius: var(--r-sm);
+    background: var(--blush);
+    font-size: 0.86rem;
+    color: var(--cocoa-2);
+  }
+  .pd-notes summary {
+    cursor: pointer;
+    font: italic 600 1.05rem var(--serif);
+    color: var(--cocoa);
+  }
+  .pd-notes ul {
+    margin: 8px 0 0;
+    padding-left: 1.1em;
+  }
+</style>

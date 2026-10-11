@@ -1,0 +1,246 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import GoogleButton from '../components/GoogleButton.astro';
+import { waLink } from '../config';
+---
+
+<Base title="My account" description="Sign in to see your Melt & Box Co. orders." noindex>
+  <section class="wrap acct">
+    <p class="acct-msg" data-acct-msg role="status"></p>
+
+    <!-- Signed out -->
+    <div class="card signin" data-acct-signin hidden>
+      <Icon name="user" size={40} />
+      <h1>Sign in or create an account</h1>
+      <p class="muted">Use your Google account — no new password to remember. You'll be able to see all your orders and their status here.</p>
+      <GoogleButton attr="data-acct-google" />
+      <p class="acct-err" data-acct-err role="alert" hidden></p>
+    </div>
+
+    <!-- Signed in -->
+    <div data-acct-in hidden>
+      <div class="acct-head">
+        <div>
+          <p class="eyebrow">My account</p>
+          <h1>Hello, <span data-acct-name></span></h1>
+          <p class="muted" data-acct-email></p>
+        </div>
+        <button type="button" class="btn btn-sm btn-ghost" data-acct-signout>Sign out</button>
+      </div>
+
+      <div class="card saved" data-acct-saved hidden>
+        <p class="serif saved-h">Saved details</p>
+        <p data-acct-saved-text></p>
+        <p class="muted small">We contact you on this number (preferably WhatsApp) for order confirmation, payment and updates. Update it at your next checkout.</p>
+      </div>
+
+      <h2 class="orders-h">My orders</h2>
+      <div class="orders" data-acct-orders></div>
+    </div>
+  </section>
+
+  <template id="acct-order">
+    <article class="card order">
+      <header class="o-head">
+        <div>
+          <strong class="o-id"></strong>
+          <span class="o-date muted"></span>
+        </div>
+        <span class="badge o-badge"></span>
+      </header>
+      <ol class="steps"></ol>
+      <p class="o-desc"></p>
+      <ul class="o-items"></ul>
+      <div class="o-total"><span>Subtotal</span><strong></strong></div>
+      <a class="btn btn-sm btn-ghost o-wa" target="_blank" rel="noopener" href={waLink()}><Icon name="whatsapp" size={18} /> Ask about this order</a>
+    </article>
+  </template>
+</Base>
+
+<script src="../scripts/account.ts"></script>
+
+<style>
+  .acct {
+    max-width: 760px;
+    padding-block: clamp(28px, 5vw, 64px);
+  }
+  .acct-msg:empty {
+    display: none;
+  }
+  .acct-msg {
+    padding: 12px 14px;
+    border-radius: var(--r-sm);
+    background: var(--blush);
+    text-align: center;
+  }
+  .signin {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    text-align: center;
+    padding: clamp(28px, 5vw, 48px) 24px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .signin[hidden] {
+    display: none;
+  }
+  .signin :global(svg) {
+    color: var(--gold);
+  }
+  .signin h1 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    margin: 0;
+  }
+  .signin p {
+    margin: 0;
+    max-width: 42ch;
+  }
+  .acct-err {
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    background: #fbe7e4;
+    color: #8c2f25;
+    font-size: 0.86rem;
+  }
+  .acct-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .acct-head h1 {
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    margin-bottom: 4px;
+  }
+  .saved {
+    margin-top: 20px;
+    padding: 18px 20px;
+  }
+  .saved-h {
+    font-size: 1.15rem;
+    margin-bottom: 6px;
+  }
+  .saved p {
+    margin: 0 0 6px;
+  }
+  .small {
+    font-size: 0.8rem;
+  }
+  .orders-h {
+    margin-top: 32px;
+    font-size: 1.6rem;
+  }
+  .orders {
+    display: grid;
+    gap: 14px;
+  }
+  .orders :global(.empty) {
+    text-align: center;
+    padding: 32px;
+    color: var(--cocoa-3);
+  }
+  .orders :global(.order) {
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+  }
+  .orders :global(.o-head) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .orders :global(.o-id) {
+    display: block;
+    font: 700 1.02rem ui-monospace, Consolas, monospace;
+  }
+  .orders :global(.o-date) {
+    font-size: 0.8rem;
+  }
+  .orders :global(.steps) {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .orders :global(.steps[hidden]) {
+    display: none;
+  }
+  .orders :global(.steps li) {
+    position: relative;
+    text-align: center;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    color: var(--cocoa-3);
+    padding-top: 30px;
+  }
+  .orders :global(.steps li::before) {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 22px;
+    height: 22px;
+    margin-left: -11px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 2px solid var(--sand);
+    z-index: 1;
+  }
+  .orders :global(.steps li::after) {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: -50%;
+    width: 100%;
+    height: 2px;
+    background: var(--sand);
+  }
+  .orders :global(.steps li:first-child::after) {
+    display: none;
+  }
+  .orders :global(.steps li.done) {
+    color: var(--cocoa);
+    font-weight: 600;
+  }
+  .orders :global(.steps li.done::before) {
+    background: var(--rose);
+    border-color: var(--rose);
+    box-shadow: inset 0 0 0 4px var(--paper);
+  }
+  .orders :global(.steps li.done::after) {
+    background: var(--rose);
+  }
+  .orders :global(.o-desc) {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: var(--r-sm);
+    background: var(--blush);
+    font-size: 0.9rem;
+  }
+  .orders :global(.o-items) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.88rem;
+  }
+  .orders :global(.o-items li) {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--sand);
+  }
+  .orders :global(.o-total) {
+    display: flex;
+    justify-content: space-between;
+  }
+  .orders :global(.o-wa) {
+    justify-self: start;
+  }
+</style>

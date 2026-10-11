@@ -1,0 +1,288 @@
+---
+// Owner-only order dashboard. The only page allowed to load the Firebase SDK (see CLAUDE.md).
+import Base from '../layouts/Base.astro';
+import GoogleButton from '../components/GoogleButton.astro';
+---
+
+<Base title="Orders" noindex bare>
+  <div class="adm">
+    <header class="adm-top">
+      <div class="adm-brand">
+        <span class="serif">Melt &amp; Box Co.</span>
+        <small>Order desk</small>
+      </div>
+      <div class="adm-user" data-user hidden>
+        <span data-user-email></span>
+        <button class="btn btn-sm btn-ghost" data-signout>Sign out</button>
+      </div>
+    </header>
+
+    <p class="adm-msg" data-msg role="status"></p>
+
+    <!-- Login -->
+    <div class="card adm-login" data-login hidden>
+      <h1>Sign in</h1>
+      <p class="muted">Owner access only — use the Google account listed in firestore.rules.</p>
+      <GoogleButton attr="data-admin-google" />
+    </div>
+
+    <!-- Dashboard -->
+    <section data-dash hidden>
+      <div class="stats" data-stats></div>
+      <div class="tools">
+        <div class="tabs" data-tabs></div>
+        <input class="input search" data-search type="search" placeholder="Search name, phone or order ID" />
+      </div>
+      <div class="orders" data-orders></div>
+    </section>
+  </div>
+
+  <template id="order-tpl">
+    <article class="card order">
+      <header class="o-head">
+        <div>
+          <strong class="o-id"></strong>
+          <span class="o-time muted"></span>
+        </div>
+        <select class="input o-status" aria-label="Order status"></select>
+      </header>
+      <div class="o-body">
+        <div class="o-cust">
+          <b class="o-name"></b>
+          <a class="o-phone"></a>
+          <span class="o-email muted"></span>
+          <p class="o-addr"></p>
+          <p class="o-pay"></p>
+          <p class="o-note"></p>
+        </div>
+        <div class="o-items">
+          <ul></ul>
+          <div class="o-sub"></div>
+          <p class="o-warn" hidden></p>
+        </div>
+      </div>
+      <div class="o-actions">
+        <a class="btn btn-sm btn-wa o-wa-confirm" target="_blank" rel="noopener">WhatsApp: confirm + payment</a>
+        <a class="btn btn-sm btn-ghost o-wa-shipped" target="_blank" rel="noopener">WhatsApp: shipped</a>
+        <a class="btn btn-sm btn-ghost o-wa" target="_blank" rel="noopener">WhatsApp chat</a>
+      </div>
+      <textarea class="input o-admin-note" rows="2" placeholder="Private note (shipping charge, tracking no., etc.) — saves automatically"></textarea>
+    </article>
+  </template>
+</Base>
+
+<script src="../scripts/admin.ts"></script>
+
+<style>
+  .adm {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px var(--gutter) 60px;
+  }
+  .adm-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--sand);
+    margin-bottom: 18px;
+  }
+  .adm-brand .serif {
+    font-size: 1.4rem;
+    display: block;
+    line-height: 1.1;
+  }
+  .adm-brand small {
+    color: var(--rose);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+  .adm-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+  }
+  .adm-msg:empty {
+    display: none;
+  }
+  .adm-msg {
+    padding: 12px 14px;
+    border-radius: var(--r-sm);
+    background: var(--blush);
+    font-size: 0.9rem;
+  }
+  .adm-msg code {
+    background: var(--paper);
+    padding: 2px 6px;
+    border-radius: 4px;
+    user-select: all;
+  }
+  .adm-login[hidden] {
+    display: none;
+  }
+  .adm-login {
+    justify-items: center;
+    text-align: center;
+    max-width: 380px;
+    margin: 40px auto;
+    padding: 28px;
+    display: grid;
+    gap: 14px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .stats :global(div) {
+    padding: 14px 16px;
+    border-radius: var(--r);
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    font-size: 0.8rem;
+    color: var(--cocoa-3);
+  }
+  .stats :global(b) {
+    display: block;
+    font: italic 600 1.6rem var(--serif);
+    color: var(--cocoa);
+  }
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    flex: 1 1 520px;
+  }
+  .tabs :global(button) {
+    padding: 7px 13px;
+    border: 1.5px solid var(--sand);
+    border-radius: 999px;
+    background: var(--paper);
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tabs :global(button[aria-pressed='true']) {
+    background: var(--cocoa);
+    color: var(--paper);
+    border-color: var(--cocoa);
+  }
+  .search {
+    flex: 1 1 240px;
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+  .orders {
+    display: grid;
+    gap: 14px;
+  }
+  .orders :global(.order) {
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .orders :global(.order.is-new) {
+    border-color: var(--rose);
+    box-shadow: 0 0 0 2px rgb(180 87 77 / 0.15), var(--shadow);
+  }
+  .orders :global(.o-head) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .orders :global(.o-id) {
+    font: 700 1rem ui-monospace, Consolas, monospace;
+    margin-right: 8px;
+  }
+  .orders :global(.o-time) {
+    font-size: 0.8rem;
+  }
+  .orders :global(.o-status) {
+    width: auto;
+    min-height: 38px;
+    padding: 6px 10px;
+    font-weight: 600;
+  }
+  .orders :global(.o-body) {
+    display: grid;
+    gap: 14px;
+  }
+  @media (min-width: 760px) {
+    .orders :global(.o-body) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .orders :global(.o-cust) {
+    display: grid;
+    gap: 2px;
+    font-size: 0.9rem;
+    align-content: start;
+  }
+  .orders :global(.o-cust p) {
+    margin: 6px 0 0;
+  }
+  .orders :global(.o-note:empty) {
+    display: none;
+  }
+  .orders :global(.o-note) {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fff6dc;
+  }
+  .orders :global(.o-items ul) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.88rem;
+  }
+  .orders :global(.o-items li) {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--sand);
+  }
+  .orders :global(.o-sub) {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 8px;
+    font-weight: 700;
+  }
+  .orders :global(.o-warn) {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fbe7e4;
+    color: #8c2f25;
+    font-size: 0.82rem;
+  }
+  .orders :global(.o-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .orders :global(.o-admin-note) {
+    min-height: 60px;
+    font-size: 0.88rem;
+  }
+  .orders :global(.empty) {
+    text-align: center;
+    padding: 40px;
+    color: var(--cocoa-3);
+  }
+</style>

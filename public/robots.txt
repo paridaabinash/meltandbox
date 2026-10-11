@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /admin
+Disallow: /checkout
+Disallow: /account
+Sitemap: https://meltandbox.pages.dev/sitemap.xml

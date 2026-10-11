@@ -1,0 +1,62 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CartDrawer from '../components/CartDrawer.astro';
+import { SITE } from '../config';
+// The one web font. ?url gives the hashed /_astro/ path so preload + @font-face share it.
+import playfairItalic from '@fontsource/playfair-display/files/playfair-display-latin-600-italic.woff2?url';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string; // absolute or root-relative OG image
+  noindex?: boolean;
+  bare?: boolean; // admin: no shop header/footer/cart
+}
+const { title, description = SITE.description, image, noindex = false, bare = false } = Astro.props;
+const fullTitle = title ? `${title} · ${SITE.name}` : `${SITE.name} — Handmade Candles & Gift Hampers`;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE.url).href;
+const ogImage = image ? new URL(image, Astro.site ?? SITE.url).href : undefined;
+---
+
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta name="theme-color" content="#fbf6ef" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href={playfairItalic} as="font" type="font/woff2" crossorigin />
+    <style set:html={`@font-face{font-family:'Playfair';font-style:italic;font-weight:600;font-display:swap;src:url(${playfairItalic}) format('woff2')}`} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <slot name="head" />
+  </head>
+  <body>
+    {
+      bare ? (
+        <slot />
+      ) : (
+        <>
+          <a class="sr-only" href="#main">Skip to content</a>
+          <Header />
+          <main id="main">
+            <slot />
+          </main>
+          <Footer />
+          <CartDrawer />
+        </>
+      )
+    }
+  </body>
+</html>

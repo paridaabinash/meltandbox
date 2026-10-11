@@ -1,0 +1,484 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import GoogleButton from '../components/GoogleButton.astro';
+import { PRODUCTS } from '../data/products';
+import { OFFERS, SITE } from '../config';
+
+// Compact price map so the checkout can refresh stale cart prices.
+const catalog = Object.fromEntries(PRODUCTS.map((p) => [p.slug, Object.fromEntries(p.variants.map((v) => [v.id, v.price]))]));
+---
+
+<Base title="Checkout" noindex>
+  <div class="wrap co" data-checkout>
+    <!-- Empty -->
+    <section class="co-empty" data-co-empty hidden>
+      <Icon name="flame" size={44} />
+      <h1>Your cart is empty</h1>
+      <p class="muted">Find something warm to gift (or keep!).</p>
+      <a href="/shop/" class="btn">Browse candles <Icon name="arrow" /></a>
+    </section>
+
+    <!-- Checkout -->
+    <section class="co-main" data-co-main hidden>
+      <h1>Checkout</h1>
+      <div class="co-grid">
+        <div class="co-form">
+          <!-- Step 1: sign in -->
+          <div class="card fs signin" data-co-signin hidden>
+            <p class="serif fs-h">Sign in to place your order</p>
+            <p class="muted">Sign in with Google to save your details for next time and see all your orders in one place.</p>
+            <GoogleButton attr="data-co-google" />
+            <p class="co-error" data-co-auth-error role="alert" hidden></p>
+          </div>
+
+          <div class="whoami" data-co-who hidden>
+            <Icon name="user" size={18} />
+            <span>Signed in as <b data-co-who-name></b></span>
+            <button type="button" class="linkish" data-co-signout>Not you? Sign out</button>
+          </div>
+
+          <form class="co-fields" data-co-form method="post" action="#" onsubmit="return false" novalidate hidden>
+            <fieldset class="card fs">
+              <legend class="serif">Contact</legend>
+              <div class="field">
+                <label for="name">Full name *</label>
+                <input class="input" id="name" name="name" autocomplete="name" required minlength="2" maxlength="80" />
+              </div>
+              <div class="field">
+                <label for="phone">WhatsApp number *</label>
+                <div class="phone-wrap">
+                  <span class="cc">+91</span>
+                  <input class="input" id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" required pattern="[6-9][0-9]{9}" maxlength="14" placeholder="10-digit mobile number" aria-describedby="contact-info" />
+                </div>
+                <label class="check">
+                  <input type="checkbox" name="whatsapp" checked />
+                  <span>This number is on WhatsApp</span>
+                </label>
+              </div>
+              <div class="contact-info" id="contact-info">
+                <Icon name="whatsapp" size={22} />
+                <p>
+                  <b>We'll contact you on this number</b> — preferably on WhatsApp — to confirm your order, share the <b>payment details</b>{' '}
+                  and send <b>order updates</b>. Please make sure it's correct.
+                </p>
+              </div>
+              <div class="field">
+                <label for="email">Email <span class="muted">(optional)</span></label>
+                <input class="input" id="email" name="email" type="email" autocomplete="email" maxlength="120" />
+              </div>
+            </fieldset>
+
+            <fieldset class="card fs">
+              <legend class="serif">Delivery address</legend>
+              <div class="field">
+                <label for="address">House no., street, area *</label>
+                <textarea class="input" id="address" name="address" autocomplete="street-address" required minlength="8" maxlength="400" rows="3"></textarea>
+              </div>
+              <div class="row3">
+                <div class="field">
+                  <label for="city">City *</label>
+                  <input class="input" id="city" name="city" autocomplete="address-level2" required maxlength="60" />
+                </div>
+                <div class="field">
+                  <label for="pincode">Pincode *</label>
+                  <input class="input" id="pincode" name="pincode" inputmode="numeric" autocomplete="postal-code" required pattern="[1-9][0-9]{5}" maxlength="6" />
+                </div>
+                <div class="field">
+                  <label for="state">State</label>
+                  <input class="input" id="state" name="state" autocomplete="address-level1" maxlength="60" />
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="card fs">
+              <legend class="serif">Customisation &amp; notes</legend>
+              <div class="field">
+                <label for="note">Colours, fragrance, gift message, delivery date…</label>
+                <textarea class="input" id="note" name="note" maxlength="1000" rows="3" placeholder="e.g. Lavender colour, rose fragrance, needed by 25th"></textarea>
+              </div>
+            </fieldset>
+
+            <fieldset class="card fs">
+              <legend class="serif">Payment</legend>
+              <div class="pay-info">
+                <Icon name="phone" size={22} />
+                <p>
+                  <b>No online payment needed.</b> Once we accept your order, we'll message you on WhatsApp (or call) at the number above with the final
+                  total (including shipping, if any) and how to pay.
+                </p>
+              </div>
+              <label class="check consent">
+                <input type="checkbox" name="consent" required />
+                <span>I agree to be contacted on the number above (preferably WhatsApp) for order confirmation, payment and updates. *</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" name="save" checked />
+                <span>Save these details for my next order</span>
+              </label>
+            </fieldset>
+
+            <!-- honeypot: bots fill this, humans never see it -->
+            <div class="hp" aria-hidden="true">
+              <label>Website <input name="website" tabindex="-1" autocomplete="off" /></label>
+            </div>
+          </form>
+        </div>
+
+        <aside class="co-side">
+          <div class="card summary">
+            <h2 class="sum-h">Order summary</h2>
+            <ul class="sum-list" data-co-list></ul>
+            <div class="sum-row"><span>Subtotal</span><strong data-co-subtotal>₹0</strong></div>
+            <div class="sum-row"><span>Shipping</span><span data-co-shipping>—</span></div>
+            <div class="sum-row total"><span>Total</span><strong data-co-total>₹0</strong></div>
+            <p class="sum-hint" data-co-hint></p>
+            <p class="sum-pay"><Icon name="whatsapp" size={16} /> Pay after confirmation — we'll contact you on WhatsApp.</p>
+            <p class="co-error" data-co-error role="alert" hidden></p>
+            <button type="button" class="btn btn-rose btn-block" data-co-submit hidden>
+              Place order · <span data-co-btn-total>₹0</span>
+            </button>
+            <p class="sum-small muted" data-co-signin-hint>Sign in to place your order.</p>
+            <p class="sum-small muted">Handmade items may vary slightly from photos.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Success -->
+    <section class="co-done" data-co-done hidden>
+      <div class="done-badge"><Icon name="check" size={34} /></div>
+      <p class="eyebrow">Thank you!</p>
+      <h1>Your order is placed</h1>
+
+      <div class="card done-card">
+        <div class="done-id">
+          <span class="muted">Order ID</span>
+          <strong data-done-id>MB-</strong>
+          <button type="button" class="btn btn-sm btn-ghost" data-copy><Icon name="copy" size={16} /> Copy</button>
+        </div>
+        <div class="sum-row total"><span>Order total</span><strong data-done-total>₹0</strong></div>
+        <p class="sum-hint" data-done-ship></p>
+
+        <div class="contact-info big">
+          <Icon name="whatsapp" size={26} />
+          <p>
+            We'll contact you on <b data-done-phone></b><span data-done-wa-note> on WhatsApp</span> to confirm your order and share the payment details. All order
+            updates will come on this number.
+          </p>
+        </div>
+
+        <ol class="next">
+          <li><b>We review your order</b> and check availability &amp; customisation.</li>
+          <li><b>We message you on WhatsApp</b> (or call) with the final total and payment details.</li>
+          <li><b>Handmade, packed &amp; shipped</b> — with updates on WhatsApp along the way.</li>
+        </ol>
+
+        <a class="btn btn-block" data-done-orders href="/account/"><Icon name="bag" /> View my orders</a>
+        <a class="btn btn-wa btn-block" data-done-wa target="_blank" rel="noopener"><Icon name="whatsapp" /> Message us on WhatsApp (optional)</a>
+      </div>
+      <p class="muted center sum-small" data-done-offline hidden>
+        Your order was sent via WhatsApp. Please tap “Send” in WhatsApp so we receive it.
+      </p>
+    </section>
+  </div>
+
+  <script type="application/json" id="catalog" set:html={JSON.stringify(catalog)} />
+  <script type="application/json" id="shop-meta" set:html={JSON.stringify({ wa: SITE.whatsapp, mini: OFFERS.freeMiniCandleAbove, ship: OFFERS.freeShippingAbove })} />
+</Base>
+
+<script src="../scripts/checkout.ts"></script>
+
+<style>
+  .co {
+    padding-block: clamp(24px, 4vw, 48px) 32px;
+  }
+  .co-empty,
+  .co-done {
+    text-align: center;
+    max-width: 580px;
+    margin: 0 auto;
+    padding-block: 40px;
+  }
+  .co-empty :global(svg) {
+    margin: 0 auto 12px;
+    color: var(--gold);
+  }
+  .co-grid {
+    display: grid;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (min-width: 960px) {
+    .co-grid {
+      grid-template-columns: 1fr 400px;
+      gap: 32px;
+    }
+    .co-side {
+      position: sticky;
+      top: calc(var(--header-h) + 20px);
+    }
+  }
+  .co-form,
+  .co-fields {
+    display: grid;
+    gap: 16px;
+  }
+  .co-fields[hidden],
+  .fs[hidden],
+  .whoami[hidden] {
+    display: none;
+  }
+  .fs {
+    margin: 0;
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+  }
+  .fs legend,
+  .fs-h {
+    float: left;
+    width: 100%;
+    font-size: 1.25rem;
+    padding: 0;
+    margin: 0 0 4px;
+  }
+  .signin {
+    text-align: center;
+    justify-items: center;
+    padding: 28px 20px;
+  }
+  .signin p {
+    margin: 0;
+    max-width: 44ch;
+  }
+  .whoami {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: var(--r-sm);
+    background: var(--blush);
+    font-size: 0.88rem;
+  }
+  .whoami :global(svg) {
+    color: var(--rose);
+  }
+  .linkish {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 0.82rem;
+    color: var(--cocoa-2);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .row3 {
+    display: grid;
+    gap: 14px;
+  }
+  @media (min-width: 640px) {
+    .row3 {
+      grid-template-columns: 1.3fr 1fr 1fr;
+    }
+  }
+  .input:user-invalid {
+    border-color: var(--rose);
+  }
+  .phone-wrap {
+    display: flex;
+    align-items: stretch;
+  }
+  .cc {
+    display: grid;
+    place-items: center;
+    padding: 0 12px;
+    border: 1.5px solid var(--sand);
+    border-right: 0;
+    border-radius: var(--r-sm) 0 0 var(--r-sm);
+    background: var(--blush);
+    font-weight: 600;
+    color: var(--cocoa-2);
+  }
+  .phone-wrap .input {
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    letter-spacing: 0.04em;
+  }
+  .check {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 0.88rem;
+    color: var(--cocoa-2);
+    cursor: pointer;
+  }
+  .check input {
+    accent-color: var(--rose);
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0;
+    flex: none;
+  }
+  .consent {
+    padding: 12px 14px;
+    border: 1.5px solid var(--sand);
+    border-radius: var(--r-sm);
+    color: var(--cocoa);
+  }
+  .consent:has(input:checked) {
+    border-color: var(--ok);
+    background: #eef5ee;
+  }
+  .consent:has(input:user-invalid) {
+    border-color: var(--rose);
+  }
+  .contact-info,
+  .pay-info {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px;
+    border-radius: var(--r-sm);
+    background: #eaf6ee;
+    border: 1px solid #cfe8d6;
+    font-size: 0.88rem;
+    color: #24502f;
+  }
+  .pay-info {
+    background: var(--blush);
+    border-color: var(--sand);
+    color: var(--cocoa-2);
+  }
+  .contact-info p,
+  .pay-info p {
+    margin: 0;
+  }
+  .contact-info :global(svg) {
+    flex: none;
+    color: #1f8f4e;
+  }
+  .pay-info :global(svg) {
+    flex: none;
+    color: var(--rose);
+  }
+  .contact-info.big {
+    font-size: 0.95rem;
+    text-align: left;
+  }
+  .hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .summary {
+    padding: 20px;
+  }
+  .sum-h {
+    font-size: 1.35rem;
+  }
+  .sum-list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    max-height: 46vh;
+    overflow-y: auto;
+  }
+  .sum-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 0.95rem;
+  }
+  .sum-row.total {
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--sand);
+    font-size: 1.15rem;
+  }
+  .sum-hint {
+    font-size: 0.82rem;
+    color: var(--ok);
+    min-height: 1em;
+  }
+  .sum-pay {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.82rem;
+    color: #24502f;
+  }
+  .sum-pay :global(svg) {
+    color: #1f8f4e;
+    flex: none;
+  }
+  .sum-small {
+    font-size: 0.76rem;
+    margin: 10px 0 0;
+  }
+  .co-error {
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    background: #fbe7e4;
+    color: #8c2f25;
+    font-size: 0.86rem;
+  }
+
+  .done-badge {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--rose));
+    color: #fff;
+    box-shadow: 0 10px 30px -10px var(--rose);
+    animation: pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+  }
+  @keyframes pop {
+    from {
+      transform: scale(0.4);
+      opacity: 0;
+    }
+  }
+  .done-card {
+    display: grid;
+    gap: 14px;
+    padding: 22px;
+    text-align: left;
+    margin-top: 20px;
+  }
+  .done-id {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .done-id strong {
+    font: 700 1.15rem/1 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    letter-spacing: 0.04em;
+    flex: 1;
+    white-space: nowrap;
+  }
+  .next {
+    margin: 0;
+    padding-left: 1.3em;
+    font-size: 0.9rem;
+    color: var(--cocoa-2);
+    display: grid;
+    gap: 6px;
+  }
+  .next b {
+    color: var(--cocoa);
+  }
+  .next li::marker {
+    color: var(--rose);
+    font-weight: 700;
+  }
+</style>
