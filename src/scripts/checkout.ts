@@ -3,7 +3,7 @@ import { clearCart, giftLineHTML, inr, lineHTML, perks, readCart, subtotalOf, wr
 import { commit, createWrite, dbReady, getDoc, setWrite } from './firestore-rest';
 import { newOrderId, type Customer, type Order, type Profile } from './order-status';
 import type { User } from './auth';
-import { FIREBASE } from '../config';
+import { FIREBASE, ORDER_EMAIL_URL } from '../config';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!;
 const catalog: Record<string, Record<string, number>> = JSON.parse($('#catalog').textContent!);
@@ -133,7 +133,14 @@ function showError(msg: string) {
   el.hidden = !msg;
 }
 
-function showDone(id: string, o: Omit<Order, 'uid'>, offline: boolean) {
+// Ask the Apps Script to email the customer + business. Fire-and-forget: the order is already saved,
+// and `keepalive` lets the request finish even if the customer navigates away.
+function notifyByEmail(orderId: string, idToken: string) {
+  if (!ORDER_EMAIL_URL) return;
+  fetch(ORDER_EMAIL_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: JSON.stringify({ orderId, idToken }) }).catch(() => {});
+}
+
+function showDone(id: string, o: Omit<Order, 'uid'>, offline: boolean, emailedTo: string | null = null) {
   placing = true;
   $('[data-co-main]').hidden = true;
   $('[data-co-empty]').hidden = true;
@@ -147,6 +154,8 @@ function showDone(id: string, o: Omit<Order, 'uid'>, offline: boolean) {
     : (o.freeMiniCandle ? '🎁 Includes a free mini candle. ' : '') + 'Shipping charges (if any) will be shared on WhatsApp.';
   $<HTMLAnchorElement>('[data-done-wa]').href = `https://wa.me/${meta.wa}?text=${encodeURIComponent(waText(id, o))}`;
   $('[data-done-orders]').hidden = offline;
+  $('[data-done-email]').hidden = !emailedTo;
+  $('[data-done-email-to]').textContent = emailedTo ?? '';
   $('[data-done-offline]').hidden = !offline;
   $('[data-copy]').onclick = () => navigator.clipboard?.writeText(id).then(() => ($('[data-copy]').lastChild!.textContent = ' Copied'));
   window.scrollTo({ top: 0 });
@@ -203,9 +212,11 @@ submitBtn.addEventListener('click', async () => {
   try {
     const writes = [createWrite(`orders/${id}`, { ...order, uid: user.uid }, ['createdAt'])];
     if (fd.get('save') === 'on') writes.push(setWrite(`users/${user.uid}`, { ...customer }, ['updatedAt']));
-    await commit(writes, await user.getIdToken());
+    const token = await user.getIdToken();
+    await commit(writes, token);
+    notifyByEmail(id, token);
     clearCart();
-    showDone(id, order, false);
+    showDone(id, order, false, ORDER_EMAIL_URL ? user.email : null);
   } catch (err) {
     console.error(err);
     submitBtn.disabled = false;

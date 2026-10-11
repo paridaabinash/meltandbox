@@ -24,6 +24,10 @@ export const FIREBASE = {
   projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID ?? '',
 };
 
+// Google Apps Script web app that emails the customer + business after each order (apps-script/Code.gs).
+// Empty = no emails. Set PUBLIC_ORDER_EMAIL_URL to the deployment's /exec URL.
+export const ORDER_EMAIL_URL: string = import.meta.env.PUBLIC_ORDER_EMAIL_URL ?? '';
+
 export const waLink = (text?: string) =>
   `https://wa.me/${SITE.whatsapp}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 export const igLink = `https://instagram.com/${SITE.instagram}`;

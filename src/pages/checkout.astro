@@ -168,6 +168,8 @@ const catalog = Object.fromEntries(PRODUCTS.map((p) => [p.slug, Object.fromEntri
           </p>
         </div>
 
+        <p class="email-note" data-done-email hidden><Icon name="check" size={16} /> A confirmation email is on its way to <b data-done-email-to></b>.</p>
+
         <ol class="next">
           <li><b>We review your order</b> and check availability &amp; customisation.</li>
           <li><b>We message you on WhatsApp</b> (or call) with the final total and payment details.</li>
@@ -465,6 +467,18 @@ const catalog = Object.fromEntries(PRODUCTS.map((p) => [p.slug, Object.fromEntri
     letter-spacing: 0.04em;
     flex: 1;
     white-space: nowrap;
+  }
+  .email-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--cocoa-2);
+  }
+  .email-note :global(svg) {
+    color: var(--ok);
+    flex: none;
   }
   .next {
     margin: 0;

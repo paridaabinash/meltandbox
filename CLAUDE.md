@@ -52,6 +52,7 @@ src/scripts/             cart.ts (all pages), checkout.ts, account.ts, auth.ts, 
 firestore.rules          security rules — paste into Firebase console (or `firebase deploy --only firestore:rules`)
 public/_headers          cache headers (Cloudflare Pages / Netlify both read this file)
 public/_redirects        /track → /account
+apps-script/              Google Apps Script web app that sends order emails (deployed manually from the shop Gmail)
 scripts/extract-catalog.py  one-time PDF → photos extractor (kept for reference)
 ```
 
@@ -69,6 +70,10 @@ scripts/extract-catalog.py  one-time PDF → photos extractor (kept for referenc
   contacted on their WhatsApp number for confirmation, payment and updates. Keep that copy if you edit checkout.
 - Sign-in = Google only (free). Phone-OTP sign-in costs money (SMS) — don't add it without asking.
 - Admin = Google account whose UID is listed in `firestore.rules` `isAdmin()`.
+- Order emails: after the order commit, checkout POSTs only `{orderId, idToken}` (no-cors, keepalive) to `ORDER_EMAIL_URL`.
+  `apps-script/Code.gs` verifies the token, reads the order AS the customer (rules enforce ownership), checks uid match +
+  freshness (15 min) + dedupe, then emails the verified Google address + the business. Never let the endpoint accept
+  recipients or email content from the request. After editing Code.gs the owner must redeploy a new version.
 - Client-sent prices are not trusted blindly: owner confirms every order manually; admin view re-checks totals against the catalogue.
 - No secrets in this repo. Firebase web config is public by design.
 
