@@ -23,9 +23,11 @@ var CONFIG = {
   phone: '+91 8528500866',
   instagram: 'meltandboxco.in',
   // Business inbox for new-order alerts. Empty = the Gmail account that deployed this script.
-  businessEmail: '',
+  businessEmail: 'meltandboxco@gmail.com',
+  // Extra inboxes CC'd on the business alerts (new orders + status changes). Replies still go to businessEmail.
+  notifyEmails: [],
   freshMinutes: 15, // only email about orders/status changes from the last N minutes (blocks replays)
-  adminUids: ['DEV7zs6GWjSejA2PpnrbQsQQRUh1'], // same as isAdmin() in firestore.rules
+  adminUids: ['DEV7zs6GWjSejA2PpnrbQsQQRUh1', 'gBQdLare0NVcXfZ4g16l1CcmKmh2'], // same as isAdmin() in firestore.rules
 };
 
 // ── Web app entry ────────────────────────────────────────────────────────────
@@ -71,7 +73,7 @@ function handleOrder(orderId, idToken) {
     if (user.email && user.emailVerified) {
       MailApp.sendEmail({ to: user.email, subject: c.subject, htmlBody: c.html, body: c.text, name: CONFIG.shopName, replyTo: business });
     }
-    MailApp.sendEmail({ to: business, subject: b.subject, htmlBody: b.html, body: b.text, name: CONFIG.shopName + ' Orders', replyTo: user.email || business });
+    MailApp.sendEmail({ to: business, subject: b.subject, htmlBody: b.html, body: b.text, cc: notifyCc(business), name: CONFIG.shopName + ' Orders', replyTo: user.email || business });
 
     props.setProperty('sent:' + orderId, String(Date.now()));
     pruneSent(props);
@@ -109,7 +111,7 @@ function handleStatus(orderId, idToken) {
       MailApp.sendEmail({ to: to, subject: c.subject, htmlBody: c.html, body: c.text, name: CONFIG.shopName, replyTo: business });
     }
     var b = buildStatusBusinessEmail(orderId, order, to);
-    MailApp.sendEmail({ to: business, subject: b.subject, htmlBody: b.html, body: b.text, name: CONFIG.shopName + ' Orders' });
+    MailApp.sendEmail({ to: business, cc: notifyCc(business), subject: b.subject, htmlBody: b.html, body: b.text, name: CONFIG.shopName + ' Orders' });
 
     props.setProperty(key, String(Date.now()));
     pruneSent(props);
@@ -120,6 +122,11 @@ function handleStatus(orderId, idToken) {
 }
 
 // ── Firebase lookups ─────────────────────────────────────────────────────────
+// Extra alert recipients, minus the main business inbox (no duplicate copy).
+function notifyCc(business) {
+  return (CONFIG.notifyEmails || []).filter(function (e) { return e && e.toLowerCase() !== String(business).toLowerCase(); }).join(',');
+}
+
 function lookupUser(idToken) {
   var res = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + CONFIG.apiKey, {
     method: 'post',

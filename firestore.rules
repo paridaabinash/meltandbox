@@ -13,7 +13,7 @@ service cloud.firestore {
 
     // Owner access (shop owner's Google account UID). To add another admin, append their UID (shown at /admin) and publish.
     function isAdmin() {
-      return request.auth != null && request.auth.uid in ['DEV7zs6GWjSejA2PpnrbQsQQRUh1'];
+      return request.auth != null && request.auth.uid in ['DEV7zs6GWjSejA2PpnrbQsQQRUh1', 'gBQdLare0NVcXfZ4g16l1CcmKmh2'];
     }
 
     function isUser(uid) {
