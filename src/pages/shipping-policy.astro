@@ -1,0 +1,23 @@
+---
+import PolicyPage from '../components/PolicyPage.astro';
+import { OFFERS } from '../config';
+---
+
+<PolicyPage title="Shipping Policy" description="Processing times, delivery across India and shipping charges for Melt & Box Co. handmade candles." updated="13 October 2026">
+  <p>We ship our handmade candles across India with trusted courier partners.</p>
+
+  <h2>Processing &amp; delivery time</h2>
+  <p>Every candle is made by hand, so timelines depend on the design, any customisation and the quantity. We tell you when to expect your order when we confirm it on WhatsApp. Delivery time depends on your pincode; festive seasons and remote areas can take a little longer.</p>
+
+  <h2>Shipping charges</h2>
+  <p>Shipping is free on orders above ₹{OFFERS.freeShippingAbove}. Below that, we tell you the shipping charge on WhatsApp when we confirm your order, before you pay — it then shows on your order in <a href="/account/">My orders</a>.</p>
+
+  <h2>Tracking</h2>
+  <p>When your parcel ships we send the tracking details on WhatsApp. You can also see your order's status any time in <a href="/account/">My orders</a>.</p>
+
+  <h2>Address issues</h2>
+  <p>Please double-check your address and WhatsApp number at checkout. We can't be responsible for delays caused by incorrect details, and re-shipping may be charged.</p>
+
+  <h2>Heat &amp; handling</h2>
+  <p>Candles are made of wax and can soften in extreme heat. We pack carefully, but please collect your parcel promptly and keep it out of direct sun.</p>
+</PolicyPage>

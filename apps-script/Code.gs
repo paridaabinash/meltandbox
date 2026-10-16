@@ -6,6 +6,8 @@
  *    customer (rules: only the order's owner can read it), then emails the customer + the business.
  * 2. Status change — /admin POSTs {type:'status', orderId, idToken} (owner's token). Only UIDs in CONFIG.adminUids are
  *    accepted; the order + shop settings are read with the owner's token, then the customer + business are emailed.
+ * 3. Publish — /admin POSTs {type:'publish', idToken} (owner's token) → POSTs the Cloudflare Pages deploy hook stored in
+ *    Script Properties as DEPLOY_HOOK_URL (Project Settings → Script properties).
  * Nothing in a request is trusted except the order id + token, so the endpoint can't be used to send arbitrary mail.
  *
  * Setup: see README.md → "Order emails". Deploy → New deployment → Web app → Execute as: Me, Who has access: Anyone.
@@ -26,6 +28,7 @@ var CONFIG = {
   businessEmail: 'meltandboxco@gmail.com',
   // Extra inboxes CC'd on the business alerts (new orders + status changes). Replies still go to businessEmail.
   notifyEmails: [],
+  publishGapSeconds: 60, // minimum gap between "Publish to website" rebuilds
   freshMinutes: 15, // only email about orders/status changes from the last N minutes (blocks replays)
   adminUids: ['DEV7zs6GWjSejA2PpnrbQsQQRUh1', 'gBQdLare0NVcXfZ4g16l1CcmKmh2'], // same as isAdmin() in firestore.rules
 };
@@ -36,7 +39,8 @@ function doPost(e) {
     var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     var orderId = String(body.orderId || '');
     var idToken = String(body.idToken || '');
-    var result = body.type === 'status' ? handleStatus(orderId, idToken) : handleOrder(orderId, idToken);
+    var result =
+      body.type === 'publish' ? handlePublish(idToken) : body.type === 'status' ? handleStatus(orderId, idToken) : handleOrder(orderId, idToken);
     return json(result);
   } catch (err) {
     console.error(err);
@@ -116,6 +120,32 @@ function handleStatus(orderId, idToken) {
     props.setProperty(key, String(Date.now()));
     pruneSent(props);
     return { ok: true, customer: !!to };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Owner clicked "Publish to website" in /admin → Products: trigger a Cloudflare Pages rebuild, which reads the
+// latest catalogue from Firestore. The deploy-hook URL lives in Script Properties (DEPLOY_HOOK_URL), never in
+// the website, so only admins can trigger builds.
+function handlePublish(idToken) {
+  if (idToken.length < 100) return { ok: false, error: 'bad-request' };
+  var admin = lookupUser(idToken);
+  if (!admin || CONFIG.adminUids.indexOf(admin.uid) === -1) return { ok: false, error: 'forbidden' };
+
+  var props = PropertiesService.getScriptProperties();
+  var hook = props.getProperty('DEPLOY_HOOK_URL');
+  if (!hook) return { ok: false, error: 'no-deploy-hook' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var last = Number(props.getProperty('publish:last') || 0);
+    if (Date.now() - last < CONFIG.publishGapSeconds * 1000) return { ok: false, error: 'too-soon' };
+    var res = UrlFetchApp.fetch(hook, { method: 'post', muteHttpExceptions: true });
+    if (res.getResponseCode() >= 300) return { ok: false, error: 'hook-' + res.getResponseCode() };
+    props.setProperty('publish:last', String(Date.now()));
+    return { ok: true };
   } finally {
     lock.releaseLock();
   }

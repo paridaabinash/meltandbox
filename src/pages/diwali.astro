@@ -1,0 +1,125 @@
+---
+// Diwali landing page — for Instagram bio / ads. Lists the Diwali catalogue (collection 'diwali').
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import ProductCard from '../components/ProductCard.astro';
+import MakeYourOwn from '../components/MakeYourOwn.astro';
+import Icon from '../components/Icon.astro';
+import { COLLECTIONS } from '../data/products';
+import { PRODUCTS } from '../data/catalog';
+import { OFFERS } from '../config';
+import { getImage } from 'astro:assets';
+import { photo } from '../lib/images';
+
+const items = PRODUCTS.filter((p) => p.collection === 'diwali');
+const og = await getImage({ src: photo('diwali-hero'), width: 720, format: 'jpg', quality: 70 });
+const occasions = ['Corporate gifting', 'Guest presents', 'Return gifts', 'Festive hampers', 'Pooja thalis & rangoli', 'Personal gifting'];
+---
+
+<Base
+  title="Diwali Candle Collection"
+  description={`Handmade Diwali candles: urlis, clay diyas, daisy tealights, laddoo & modak candles. Free mini candle on orders above ₹${OFFERS.freeMiniCandleAbove}.`}
+  image={og.src}
+>
+  <PageHero
+    eyebrow="Now live · Festive collection"
+    title={COLLECTIONS.diwali.title}
+    lede={`${items.length} handmade designs to light up your festivities — urlis, diyas, tealights and daisy sets for gifting and decor.`}
+    image="diwali-hero"
+    tone="#ba6b4e"
+  >
+    <a href="#collection" class="btn">Shop the collection <Icon name="arrow" /></a>
+    <a href="/bulk-orders/" class="btn btn-ghost">Bulk &amp; corporate orders</a>
+  </PageHero>
+
+  <section class="wrap offer-band">
+    <div class="offer">
+      <Icon name="gift" size={28} />
+      <p><b>Free mini candle</b> on orders above ₹{OFFERS.freeMiniCandleAbove}/- · <b>Free shipping</b> above ₹{OFFERS.freeShippingAbove}/-</p>
+    </div>
+  </section>
+
+  <section class="section wrap" id="collection">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Our festive favourites</p>
+        <h2>All Diwali designs</h2>
+      </div>
+    </div>
+    <div class="grid">
+      {items.map((p) => <ProductCard product={p} />)}
+    </div>
+  </section>
+
+  <section class="wrap perfect-wrap">
+    <div class="card perfect">
+      <h2 class="perfect-h">Perfect for</h2>
+      <ul>
+        {
+          occasions.map((o) => (
+            <li>
+              <Icon name="check" size={18} /> {o}
+            </li>
+          ))
+        }
+      </ul>
+      <a href="/bulk-orders/" class="bulk-link">Ordering in bulk? Get a quote <Icon name="arrow" size={16} /></a>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <MakeYourOwn />
+  </section>
+</Base>
+
+<style>
+  .offer-band {
+    margin-top: 20px;
+  }
+  .offer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    border-radius: var(--r);
+    background: var(--cocoa);
+    color: var(--gold-2);
+  }
+  .offer p {
+    margin: 0;
+  }
+  .offer b {
+    color: var(--paper);
+  }
+  .perfect {
+    padding: clamp(20px, 4vw, 32px);
+  }
+  .perfect-h {
+    font-size: 1.5rem;
+  }
+  .perfect ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 10px 20px;
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+  }
+  .perfect li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+  }
+  .perfect li :global(svg) {
+    color: var(--ok);
+    flex: none;
+  }
+  .bulk-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: var(--rose);
+  }
+</style>

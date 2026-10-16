@@ -38,7 +38,7 @@ function fromFV(v: FV): unknown {
   if ('mapValue' in v) return fromFields(v.mapValue!.fields ?? {});
   return null;
 }
-const fromFields = (f: Record<string, FV>) => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, fromFV(v)]));
+export const fromFields = (f: Record<string, FV>) => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, fromFV(v)]));
 
 const headers = (token?: string): HeadersInit => ({
   'Content-Type': 'application/json',

@@ -1,0 +1,161 @@
+---
+// Bulk & corporate enquiries. No backend: the form just writes a WhatsApp message (nothing is stored by us).
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import { SITE } from '../config';
+
+const occasions = ['Corporate gifting', 'Return gifts', 'Haldi / Mehendi', 'Wedding favours', 'Diwali hampers', 'Other'];
+---
+
+<Base title="Bulk & Corporate Candle Gifting" description="Custom handmade candles for corporate gifting, haldi, weddings and return gifts. Tell us the quantity and budget — we'll quote on WhatsApp.">
+  <PageHero
+    eyebrow="Made for your big day"
+    title="Bulk & corporate orders"
+    lede="Return gifts, haldi favours, wedding hampers and Diwali corporate gifting — handmade in your colours. Tell us what you need and we'll send a quote on WhatsApp."
+    image="laxmi-padam-lotus-urli"
+    tone="#5f8499"
+  >
+    <a href="#enquiry" class="btn">Get a quote <Icon name="arrow" /></a>
+    <a href={`tel:${SITE.phone.replace(/\s/g, '')}`} class="btn btn-ghost"><Icon name="phone" /> {SITE.phone}</a>
+  </PageHero>
+
+  <section class="section wrap bulk">
+    <ul class="why">
+      <li><Icon name="tag" /><span><b>Direct wholesale pricing</b>Priced per piece for your quantity.</span></li>
+      <li><Icon name="sparkle" /><span><b>Your colours &amp; theme</b>Match the wedding palette, brand colours or festival.</span></li>
+      <li><Icon name="gift" /><span><b>Gift-ready packing</b>Boxed and packed for handing out.</span></li>
+    </ul>
+
+    <form class="card enquiry" id="enquiry" data-bulk-form>
+      <h2>Tell us about your order</h2>
+      <p class="muted small">This opens WhatsApp with your details filled in — just press send. The free mini candle offer applies to regular website orders only.</p>
+      <div class="field">
+        <label for="b-name">Your name</label>
+        <input class="input" id="b-name" name="name" required maxlength="100" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="b-occasion">Occasion</label>
+        <select class="input" id="b-occasion" name="occasion">
+          {occasions.map((o) => <option>{o}</option>)}
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="b-qty">Quantity</label>
+          <input class="input" id="b-qty" name="quantity" maxlength="30" placeholder="e.g. 100 pieces" required />
+        </div>
+        <div class="field">
+          <label for="b-budget">Budget per piece <span class="muted">(optional)</span></label>
+          <input class="input" id="b-budget" name="budget" maxlength="30" placeholder="e.g. ₹50–80" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="b-design">Design you like <span class="muted">(optional)</span></label>
+        <input class="input" id="b-design" name="design" maxlength="100" placeholder="e.g. Design 07 Laddoo, or a link" />
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="b-colours">Colours <span class="muted">(optional)</span></label>
+          <input class="input" id="b-colours" name="colours" maxlength="120" placeholder="e.g. pastel pink & white" />
+        </div>
+        <div class="field">
+          <label for="b-date">Needed by <span class="muted">(optional)</span></label>
+          <input class="input" id="b-date" name="date" type="date" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="b-msg">Anything else <span class="muted">(optional)</span></label>
+        <textarea class="input" id="b-msg" name="message" rows="3" maxlength="800"></textarea>
+      </div>
+      <button type="submit" class="btn btn-wa btn-block"><Icon name="whatsapp" /> Send enquiry on WhatsApp</button>
+    </form>
+  </section>
+</Base>
+
+<script>
+  import { waLink } from '../config';
+
+  const form = document.querySelector<HTMLFormElement>('[data-bulk-form]')!;
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = new FormData(form);
+    const v = (k: string) => String(f.get(k) ?? '').trim();
+    const lines = [
+      'Hi Melt & Box Co.! Bulk order enquiry:',
+      `Name: ${v('name')}`,
+      `Occasion: ${v('occasion')}`,
+      `Quantity: ${v('quantity')}`,
+      v('budget') && `Budget per piece: ${v('budget')}`,
+      v('design') && `Design: ${v('design')}`,
+      v('colours') && `Colours: ${v('colours')}`,
+      v('date') && `Needed by: ${new Date(v('date')).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`,
+      v('message'),
+    ].filter(Boolean);
+    const url = waLink(lines.join('\n'));
+    const w = window.open(url, '_blank');
+    if (w) w.opener = null;
+    else location.href = url; // pop-up blocked
+  });
+</script>
+
+<style>
+  .bulk {
+    display: grid;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (min-width: 900px) {
+    .bulk {
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 56px;
+    }
+  }
+  .why {
+    display: grid;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .why li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .why li :global(svg) {
+    flex: none;
+    margin-top: 3px;
+    color: var(--rose);
+  }
+  .why b {
+    display: block;
+  }
+  .why span {
+    color: var(--cocoa-2);
+    font-size: 0.92rem;
+  }
+  .enquiry {
+    display: grid;
+    gap: 14px;
+    padding: clamp(20px, 4vw, 32px);
+    scroll-margin-top: calc(var(--header-h) + 16px);
+  }
+  .enquiry h2 {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+  .small {
+    font-size: 0.85rem;
+    margin: 0;
+  }
+  .row2 {
+    display: grid;
+    gap: 14px;
+  }
+  @media (min-width: 560px) {
+    .row2 {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

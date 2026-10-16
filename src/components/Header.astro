@@ -1,13 +1,29 @@
 ---
+import { Image } from 'astro:assets';
 import Icon from './Icon.astro';
-import { OFFERS, SITE } from '../config';
+import logoMark from '../assets/brand/logo-mark.png';
+import { OFFERS, SITE, igLink, waLink } from '../config';
+import { CATEGORIES, CATEGORY_IDS } from '../data/products';
 
 const path = Astro.url.pathname;
+// Desktop header links
 const nav = [
   { href: '/shop/', label: 'Shop' },
-  { href: '/shop/#diwali', label: 'Diwali' },
-  { href: '/#custom', label: 'Custom orders' },
-  { href: '/account/', label: 'My orders' },
+  { href: '/diwali/', label: 'Diwali' },
+  { href: '/daisy/', label: 'Daisy' },
+  { href: '/bulk-orders/', label: 'Bulk orders' },
+  { href: '/account/', label: 'Track order' },
+];
+// Mobile side sheet
+const menuLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/shop/', label: 'Shop all' },
+  { href: '/diwali/', label: 'Diwali special' },
+  { href: '/daisy/', label: 'Daisy collection' },
+  { href: '/#custom', label: 'Make your own' },
+  { href: '/bulk-orders/', label: 'Bulk & corporate gifting' },
+  { href: '/account/', label: 'Track order / My orders' },
+  { href: '/contact/', label: 'Contact us' },
 ];
 ---
 
@@ -21,17 +37,16 @@ const nav = [
 
 <header class="header">
   <div class="wrap header-in">
-    <details class="menu">
-      <summary aria-label="Menu"><span></span><span></span><span></span></summary>
-      <nav class="menu-panel" aria-label="Mobile">
-        {nav.map((n) => <a href={n.href}>{n.label}</a>)}
-        <a href={`https://wa.me/${SITE.whatsapp}`} target="_blank" rel="noopener">WhatsApp us</a>
-      </nav>
-    </details>
+    <button type="button" class="menu-btn" data-menu-open aria-label="Open menu" aria-haspopup="dialog">
+      <span></span><span></span><span></span>
+    </button>
 
     <a href="/" class="brand" aria-label={`${SITE.name} home`}>
-      <span class="brand-name">Melt &amp; Box Co.</span>
-      <span class="brand-tag">{SITE.tagline}</span>
+      <Image src={logoMark} alt="" width={78} height={40} densities={[1, 2]} loading="eager" class="brand-mark" />
+      <span class="brand-text">
+        <span class="brand-name">Melt &amp; Box Co.</span>
+        <span class="brand-tag">{SITE.tagline}</span>
+      </span>
     </a>
 
     <nav class="nav" aria-label="Main">
@@ -50,6 +65,49 @@ const nav = [
     </div>
   </div>
 </header>
+
+<!-- Mobile menu: left side sheet (<dialog>, opened/closed by cart.ts) -->
+<dialog class="menu-sheet" data-menu aria-label="Menu">
+  <div class="ms-in">
+    <div class="ms-head">
+      <a href="/" class="ms-brand">
+        <Image src={logoMark} alt="" width={78} height={40} densities={[1, 2]} loading="lazy" class="ms-mark" />
+        <span class="brand-name">Melt &amp; Box Co.</span>
+        <span class="brand-tag">{SITE.tagline}</span>
+      </a>
+      <button type="button" class="ms-close" data-menu-close aria-label="Close menu"><Icon name="close" /></button>
+    </div>
+    <nav aria-label="Mobile">
+      <ul class="ms-list">
+        {
+          menuLinks.map((n) => (
+            <li>
+              <a href={n.href} aria-current={path === n.href ? 'page' : undefined}>
+                {n.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="ms-sub">Shop by category</p>
+      <ul class="ms-cats">
+        {
+          CATEGORY_IDS.map((id) => (
+            <li>
+              <a href={`/collections/${id}/`} aria-current={path === `/collections/${id}/` ? 'page' : undefined}>
+                {CATEGORIES[id].short}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <div class="ms-cta">
+      <a href={waLink('Hi Melt & Box Co.!')} class="btn btn-wa" target="_blank" rel="noopener"><Icon name="whatsapp" /> WhatsApp us</a>
+      <a href={igLink} class="ms-ig" target="_blank" rel="noopener" aria-label={`Instagram @${SITE.instagram}`}><Icon name="instagram" /></a>
+    </div>
+  </div>
+</dialog>
 
 <style>
   .announce {
@@ -95,20 +153,40 @@ const nav = [
   }
   .brand {
     justify-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
     text-align: center;
     text-decoration: none;
     line-height: 1.1;
   }
+  /* The logo art sits on cream; multiply makes that cream disappear into the header. */
+  .brand :global(.brand-mark),
+  .ms-brand :global(.ms-mark) {
+    width: auto;
+    height: 26px;
+    mix-blend-mode: multiply;
+  }
+  .ms-brand :global(.ms-mark) {
+    display: block;
+    height: 34px;
+    margin-bottom: 4px;
+  }
   .brand-name {
     display: block;
     white-space: nowrap;
-    font: italic 600 1.45rem/1.1 var(--serif);
+    font: 600 1.3rem/1.1 var(--serif);
     letter-spacing: 0.01em;
+  }
+  /* Phones: logo art + name; the tagline returns on desktop (it's also in the footer badge). */
+  .header .brand-tag {
+    display: none;
   }
   .brand-tag {
     display: block;
     white-space: nowrap;
-    font: italic 0.72rem/1.4 var(--serif);
+    font: 0.72rem/1.4 var(--serif);
     color: var(--rose);
   }
   .nav {
@@ -160,7 +238,7 @@ const nav = [
     border-radius: 50%;
     background: var(--cocoa);
     color: var(--gold-2);
-    font: italic 600 1rem var(--serif);
+    font: 600 1rem var(--serif);
   }
   .acct-initial[hidden] {
     display: none;
@@ -187,62 +265,154 @@ const nav = [
     }
   }
 
-  /* mobile menu: <details> — zero JS */
-  .menu summary {
-    list-style: none;
+  /* mobile menu button + left side sheet */
+  .menu-btn {
     width: 44px;
     height: 44px;
     display: grid;
     place-content: center;
     gap: 5px;
-    cursor: pointer;
+    padding: 0;
+    border: 0;
     border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
   }
-  .menu summary::-webkit-details-marker {
-    display: none;
-  }
-  .menu summary span {
+  .menu-btn span {
     display: block;
     width: 20px;
     height: 1.7px;
     background: var(--cocoa);
     border-radius: 2px;
-    transition: transform 0.25s, opacity 0.2s;
   }
-  .menu[open] summary span:nth-child(1) {
-    transform: translateY(6.7px) rotate(45deg);
-  }
-  .menu[open] summary span:nth-child(2) {
-    opacity: 0;
-  }
-  .menu[open] summary span:nth-child(3) {
-    transform: translateY(-6.7px) rotate(-45deg);
-  }
-  .menu-panel {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: var(--header-h);
-    display: grid;
-    padding: 8px var(--gutter) 20px;
+  .menu-sheet {
+    margin: 0 auto 0 0;
+    width: min(340px, 86vw);
+    max-width: 86vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding: 0;
+    border: 0;
     background: var(--cream);
-    border-bottom: 1px solid var(--sand);
+    color: var(--cocoa);
     box-shadow: var(--shadow-lg);
   }
-  .menu-panel a {
-    padding: 14px 0;
+  .menu-sheet[open] {
+    animation: sheet-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .menu-sheet::backdrop {
+    background: rgb(40 25 20 / 0.42);
+    backdrop-filter: blur(2px);
+  }
+  @keyframes sheet-in {
+    from {
+      transform: translateX(-100%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .menu-sheet[open] {
+      animation: none;
+    }
+  }
+  .ms-in {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 22px calc(20px + env(safe-area-inset-bottom));
+  }
+  .ms-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+  .ms-brand {
+    text-decoration: none;
+    line-height: 1.1;
+  }
+  .ms-close {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--cocoa-2);
+    cursor: pointer;
+  }
+  .ms-close:hover {
+    background: var(--blush);
+  }
+  .ms-list,
+  .ms-cats {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .ms-list a {
+    display: block;
+    padding: 14px 2px;
     border-bottom: 1px solid var(--sand);
     text-decoration: none;
-    font: italic 600 1.25rem var(--serif);
+    font-size: 1.02rem;
+    font-weight: 500;
+  }
+  .ms-list a[aria-current='page'],
+  .ms-cats a[aria-current='page'] {
+    color: var(--rose);
+    font-weight: 700;
+  }
+  .ms-sub {
+    margin: 22px 0 8px;
+    font: 700 0.72rem/1.4 var(--sans);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--cocoa-3);
+  }
+  .ms-cats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ms-cats a {
+    display: block;
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .ms-cta {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 24px;
+  }
+  .ms-cta .btn {
+    flex: 1;
+  }
+  .ms-ig {
+    flex: none;
+    width: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--blush);
+    color: var(--rose);
   }
 
   @media (max-width: 380px) {
     .brand-name {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
     }
   }
   @media (min-width: 900px) {
-    .menu {
+    .menu-btn {
       display: none;
     }
     .header-in {
@@ -250,7 +420,18 @@ const nav = [
     }
     .brand {
       justify-self: start;
+      flex-direction: row;
+      gap: 12px;
       text-align: left;
+    }
+    .brand :global(.brand-mark) {
+      height: 40px;
+    }
+    .brand-name {
+      font-size: 1.45rem;
+    }
+    .header .brand-tag {
+      display: block;
     }
     .nav {
       display: flex;

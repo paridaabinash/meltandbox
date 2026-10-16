@@ -4,8 +4,10 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import CartDrawer from '../components/CartDrawer.astro';
 import { SITE } from '../config';
+import { getImage } from 'astro:assets';
+import logoBadge from '../assets/brand/logo-badge.webp';
 // The one web font. ?url gives the hashed /_astro/ path so preload + @font-face share it.
-import playfairItalic from '@fontsource/playfair-display/files/playfair-display-latin-600-italic.woff2?url';
+import playfair from '@fontsource/playfair-display/files/playfair-display-latin-600-normal.woff2?url';
 
 interface Props {
   title?: string;
@@ -17,7 +19,9 @@ interface Props {
 const { title, description = SITE.description, image, noindex = false, bare = false } = Astro.props;
 const fullTitle = title ? `${title} · ${SITE.name}` : `${SITE.name} — Handmade Candles & Gift Hampers`;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE.url).href;
-const ogImage = image ? new URL(image, Astro.site ?? SITE.url).href : undefined;
+// Pages without their own photo share the round logo (same as Instagram).
+const fallbackOg = image ? null : await getImage({ src: logoBadge, width: 600, height: 600, format: 'jpg', quality: 80 });
+const ogImage = new URL(image ?? fallbackOg!.src, Astro.site ?? SITE.url).href;
 ---
 
 <!doctype html>
@@ -30,9 +34,10 @@ const ogImage = image ? new URL(image, Astro.site ?? SITE.url).href : undefined;
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta name="theme-color" content="#fbf6ef" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="preload" href={playfairItalic} as="font" type="font/woff2" crossorigin />
-    <style set:html={`@font-face{font-family:'Playfair';font-style:italic;font-weight:600;font-display:swap;src:url(${playfairItalic}) format('woff2')}`} />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" href={playfair} as="font" type="font/woff2" crossorigin />
+    <style set:html={`@font-face{font-family:'Playfair';font-style:normal;font-weight:600;font-display:swap;src:url(${playfair}) format('woff2')}`} />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE.name} />
     <meta property="og:title" content={fullTitle} />
@@ -42,7 +47,7 @@ const ogImage = image ? new URL(image, Astro.site ?? SITE.url).href : undefined;
     <meta name="twitter:card" content="summary_large_image" />
     <slot name="head" />
   </head>
-  <body>
+  <body class:list={[{ bare }]}>
     {
       bare ? (
         <slot />

@@ -1,0 +1,55 @@
+---
+// Layout for the policy pages (shipping, refunds, privacy, terms): plain readable text.
+import Base from '../layouts/Base.astro';
+import { SITE, waLink } from '../config';
+
+interface Props {
+  title: string;
+  description: string;
+  updated: string; // e.g. "13 October 2026"
+}
+const { title, description, updated } = Astro.props;
+---
+
+<Base title={title} description={description}>
+  <article class="wrap policy">
+    <p class="eyebrow">Last updated {updated}</p>
+    <h1>{title}</h1>
+    <slot />
+    <p class="policy-help">
+      Questions? Message us on <a href={waLink('Hi Melt & Box Co.! I have a question about your policies.')} target="_blank" rel="noopener">WhatsApp ({SITE.phone})</a> or see
+      <a href="/contact/">all the ways to reach us</a>.
+    </p>
+  </article>
+</Base>
+
+<style>
+  .policy {
+    max-width: 760px;
+    padding-block: clamp(28px, 5vw, 56px) clamp(48px, 8vw, 96px);
+  }
+  .policy :global(h2) {
+    font-size: 1.35rem;
+    margin-top: 1.8em;
+  }
+  .policy :global(p),
+  .policy :global(li) {
+    color: var(--cocoa-2);
+  }
+  .policy :global(ul) {
+    padding-left: 1.2em;
+    margin: 0 0 1em;
+  }
+  .policy :global(li) {
+    margin-bottom: 0.4em;
+  }
+  .policy :global(li::marker) {
+    color: var(--gold);
+  }
+  .policy-help {
+    margin-top: 2.5em;
+    padding: 16px 18px;
+    border-radius: var(--r);
+    background: var(--blush);
+  }
+</style>

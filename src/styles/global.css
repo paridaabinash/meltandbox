@@ -40,11 +40,17 @@ html {
 }
 body {
   margin: 0;
-  background: var(--cream);
+  /* Faint "gift-wrap" doodles drawn like the logo (candles, gift boxes, diya, daisy). One ~4 KB SVG tile;
+     Vite inlines it, so no extra request. Sections with their own background simply cover it. */
+  background: var(--cream) url('../assets/brand/doodle-pattern.svg') 0 0 / 320px repeat;
   color: var(--cocoa);
   font: 16px/1.6 var(--sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+/* /admin is a work screen: plain background */
+body.bare {
+  background-image: none;
 }
 img,
 picture,
@@ -79,7 +85,6 @@ h2,
 h3,
 .serif {
   font-family: var(--serif);
-  font-style: italic;
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.01em;
@@ -465,4 +470,8 @@ textarea.input {
 .toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+/* sit above the sticky cart bar */
+body.has-cartbar .toast {
+  bottom: calc(92px + env(safe-area-inset-bottom));
 }

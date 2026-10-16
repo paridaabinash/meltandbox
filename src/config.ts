@@ -24,6 +24,11 @@ export const FIREBASE = {
   projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID ?? '',
 };
 
+// Product editor in /admin + Firestore catalogue — built but switched OFF.
+// false: the website uses src/data/products.ts (edit products there) and /admin has no Products tab.
+// true:  products come from Firestore at build time; see README → "Editing products" for the one-time setup first.
+export const CATALOG_FROM_FIRESTORE = false;
+
 // Google Apps Script web app that emails the customer + business after each order (apps-script/Code.gs).
 // Empty = no emails. Set PUBLIC_ORDER_EMAIL_URL to the deployment's /exec URL.
 export const ORDER_EMAIL_URL: string = import.meta.env.PUBLIC_ORDER_EMAIL_URL ?? '';

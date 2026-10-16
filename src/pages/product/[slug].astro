@@ -5,24 +5,31 @@ import Base from '../../layouts/Base.astro';
 import ProductImage from '../../components/ProductImage.astro';
 import ProductCard from '../../components/ProductCard.astro';
 import Icon from '../../components/Icon.astro';
-import { COLLECTIONS, PRODUCTS, formatINR, priceLabel, type Product } from '../../data/products';
-import { OFFERS, SITE, waLink } from '../../config';
+import MakeYourOwn from '../../components/MakeYourOwn.astro';
+import { CATEGORIES, COLLECTIONS, categoryOf, formatINR, priceLabel, type Product } from '../../data/products';
+import { PRODUCTS } from '../../data/catalog';
+import { OFFERS, SITE } from '../../config';
 import { photo, thumbUrl } from '../../lib/images';
 
 export const getStaticPaths = (() => PRODUCTS.map((p) => ({ params: { slug: p.slug }, props: { p } }))) satisfies GetStaticPaths;
 
 const { p } = Astro.props as { p: Product };
 const col = COLLECTIONS[p.collection];
+const catId = categoryOf(p);
+const cat = CATEGORIES[catId];
+const catHref = `/collections/${catId}/`;
 const thumb = await thumbUrl(p.slug);
 const og = await getImage({ src: photo(p.slug), width: 600, format: 'jpg', quality: 70 });
 
 const family = p.family ? PRODUCTS.filter((x) => x.family === p.family && x.slug !== p.slug) : [];
 const familyThumbs = await Promise.all(family.map((f) => thumbUrl(f.slug)));
-// Next 4 pieces after this one in the same collection (wrapping), skipping its colour family.
-const sameCol = PRODUCTS.filter((x) => x.collection === p.collection);
-const at = sameCol.indexOf(p);
-const more = [...sameCol.slice(at + 1), ...sameCol.slice(0, at)]
-  .filter((x) => !p.family || x.family !== p.family)
+// Next 4 pieces after this one in the same category (wrapping), then the same collection; skipping its colour family.
+const around = (list: Product[]) => {
+  const at = list.indexOf(p);
+  return at < 0 ? list : [...list.slice(at + 1), ...list.slice(0, at)];
+};
+const more = [...new Set([...around(PRODUCTS.filter((x) => categoryOf(x) === catId)), ...around(PRODUCTS.filter((x) => x.collection === p.collection))])]
+  .filter((x) => x !== p && (!p.family || x.family !== p.family))
   .slice(0, 4);
 const v0 = p.variants[0];
 const pageUrl = new URL(`/product/${p.slug}/`, Astro.site ?? SITE.url).href;
@@ -47,7 +54,7 @@ const jsonLd = {
   <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
 
   <nav class="wrap crumbs" aria-label="Breadcrumb">
-    <a href="/">Home</a><span>/</span><a href={`/shop/#${p.collection}`}>{col.title}</a>
+    <a href="/">Home</a><span>/</span><a href="/shop/">Shop</a><span>/</span><a href={catHref}>{cat.title}</a>
   </nav>
 
   <section class="wrap pd">
@@ -57,7 +64,7 @@ const jsonLd = {
     </div>
 
     <div class="pd-info">
-      <p class="eyebrow">{col.title}</p>
+      <p class="eyebrow"><a href={catHref}>{cat.title}</a></p>
       <h1>{p.name}</h1>
       <p class="pd-price">{priceLabel(p)}</p>
       {p.setInfo && <p class="pd-set">{p.setInfo}</p>}
@@ -93,15 +100,6 @@ const jsonLd = {
         </div>
       </form>
 
-      <a
-        class="btn btn-ghost btn-block wa-btn"
-        target="_blank"
-        rel="noopener"
-        href={waLink(`Hi Melt & Box Co.! I'm interested in "${p.name}" (${priceLabel(p)}). ${pageUrl}`)}
-      >
-        <Icon name="whatsapp" /> Ask / customise on WhatsApp
-      </a>
-
       {
         family.length > 0 && (
           <div class="family">
@@ -117,8 +115,10 @@ const jsonLd = {
         )
       }
 
+      <MakeYourOwn product={p.name} productUrl={pageUrl} />
+
       <ul class="pd-perks">
-        <li><Icon name="heart" size={18} /> Handmade with love — colours, fragrances &amp; details customisable wherever available</li>
+        <li><Icon name="heart" size={18} /> Handmade with love, made to order</li>
         <li><Icon name="gift" size={18} /> Free mini candle on orders above ₹{OFFERS.freeMiniCandleAbove}/-</li>
         <li><Icon name="truck" size={18} /> Free shipping on orders above ₹{OFFERS.freeShippingAbove}/-</li>
       </ul>
@@ -143,7 +143,7 @@ const jsonLd = {
       <section class="section wrap">
         <div class="section-head">
           <h2>You may also love</h2>
-          <a href={`/shop/#${p.collection}`} class="btn btn-sm btn-ghost">View collection <Icon name="arrow" /></a>
+          <a href={catHref} class="btn btn-sm btn-ghost">More {cat.short.toLowerCase()} <Icon name="arrow" /></a>
         </div>
         <div class="grid">
           {more.map((m) => <ProductCard product={m} />)}
@@ -208,16 +208,13 @@ const jsonLd = {
     color: var(--rose);
   }
   .pd-info h1 {
-    /* Upright for readability. System serif = no extra font download (the web font is italic-only). */
-    font-family: Georgia, 'Noto Serif', 'Times New Roman', serif;
-    font-style: normal;
     font-weight: 600;
     font-size: clamp(1.6rem, 3.6vw, 2.3rem);
     line-height: 1.2;
     letter-spacing: 0;
   }
   .pd-price {
-    font: italic 600 1.7rem var(--serif);
+    font: 600 1.7rem var(--serif);
     color: var(--rose);
     margin-bottom: 6px;
   }
@@ -292,8 +289,11 @@ const jsonLd = {
     flex: 1;
     min-width: 200px;
   }
-  .wa-btn {
-    margin-top: 10px;
+  .pd-info .eyebrow a {
+    text-decoration: none;
+  }
+  .pd-info :global(.myo) {
+    margin-top: 22px;
   }
   .family {
     margin-top: 22px;
@@ -353,7 +353,7 @@ const jsonLd = {
   }
   .pd-notes summary {
     cursor: pointer;
-    font: italic 600 1.05rem var(--serif);
+    font: 600 1.05rem var(--serif);
     color: var(--cocoa);
   }
   .pd-notes ul {

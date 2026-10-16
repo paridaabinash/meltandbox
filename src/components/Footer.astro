@@ -1,24 +1,37 @@
 ---
+import { Image } from 'astro:assets';
 import Icon from './Icon.astro';
+import logoBadge from '../assets/brand/logo-badge.webp';
 import { SITE, igLink, waLink } from '../config';
+import { CATEGORIES, CATEGORY_IDS } from '../data/products';
 const year = new Date().getFullYear();
 ---
 
 <footer class="footer">
   <div class="wrap footer-grid">
     <div>
-      <p class="f-brand">Melt &amp; Box Co.</p>
-      <p class="f-tag">{SITE.tagline}</p>
+      <Image src={logoBadge} alt={`${SITE.name} — ${SITE.tagline}`} width={132} height={132} densities={[1, 2]} class="f-badge" />
       <p class="f-copy">Handmade candles &amp; customised gift hampers. Small details, warm moments, and candles made to be remembered.</p>
     </div>
     <div>
       <p class="f-h">Shop</p>
-      <a href="/shop/#candles">The Candle Collection</a>
-      <a href="/shop/#diwali">Diwali Candle Collection</a>
-      <a href="/#custom">Custom &amp; bulk orders</a>
-      <a href="/account/">My account &amp; orders</a>
+      <a href="/shop/">All candles</a>
+      <a href="/diwali/">Diwali special</a>
+      <a href="/daisy/">Daisy collection</a>
+      {CATEGORY_IDS.filter((id) => !id.startsWith('daisy')).map((id) => <a href={`/collections/${id}/`}>{CATEGORIES[id].short}</a>)}
     </div>
     <div>
+      <p class="f-h">Help</p>
+      <a href="/account/">Track order / My orders</a>
+      <a href="/#custom">Make your own</a>
+      <a href="/bulk-orders/">Bulk &amp; corporate</a>
+      <a href="/contact/">Contact us</a>
+      <a href="/shipping-policy/">Shipping policy</a>
+      <a href="/refund-policy/">Refunds &amp; returns</a>
+      <a href="/privacy-policy/">Privacy policy</a>
+      <a href="/terms/">Terms</a>
+    </div>
+    <div class="f-hello">
       <p class="f-h">Say hello</p>
       <a href={igLink} target="_blank" rel="noopener"><Icon name="instagram" size={18} /> @{SITE.instagram}</a>
       <a href={waLink('Hi Melt & Box Co.! ')} target="_blank" rel="noopener"><Icon name="whatsapp" size={18} /> WhatsApp</a>
@@ -40,11 +53,20 @@ const year = new Date().getFullYear();
   }
   .footer-grid {
     display: grid;
-    gap: 32px;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px 20px;
   }
-  @media (min-width: 760px) {
+  .footer-grid > :first-child,
+  .f-hello {
+    grid-column: 1 / -1;
+  }
+  @media (min-width: 900px) {
     .footer-grid {
-      grid-template-columns: 1.4fr 1fr 1fr;
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    }
+    .footer-grid > :first-child,
+    .f-hello {
+      grid-column: auto;
     }
   }
   .footer a {
@@ -59,14 +81,12 @@ const year = new Date().getFullYear();
   .footer a:hover {
     color: var(--gold-2);
   }
-  .f-brand {
-    font: italic 600 1.7rem/1.1 var(--serif);
-    color: #fff;
-    margin: 0;
-  }
-  .f-tag {
-    font: italic 0.95rem var(--serif);
-    color: var(--rose-2);
+  .f-badge {
+    width: 132px;
+    height: 132px;
+    margin-bottom: 18px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgb(255 255 255 / 0.08);
   }
   .f-copy {
     max-width: 36ch;

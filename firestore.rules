@@ -7,7 +7,8 @@ rules_version = '2';
 // Data:
 //   users/{uid}       a customer's saved checkout details (only they + the owner can read)
 //   orders/{orderId}  one order; `uid` = customer who placed it
-//   settings/shop     owner-only shop settings (UPI ID)
+//   settings/shop     owner-only shop settings (UPI ID); settings/catalog = last "Publish" click
+//   products/{slug}   the catalogue (public read, owner-only write); the website reads it at build time
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -65,6 +66,72 @@ service cloud.firestore {
         && str(d.note, 0, 1000)
         && d.status == 'new'
         && d.createdAt == request.time;
+    }
+
+    // ── Catalogue (keep in sync with src/data/product-validate.ts) ──
+    function slugOk(s, max) {
+      return s is string && s.size() >= 1 && s.size() <= max && s.matches('[a-z0-9]+(-[a-z0-9]+)*');
+    }
+
+    function rupees(n) {
+      return n is int && n >= 1 && n <= 100000;
+    }
+
+    function validVariant(v) {
+      return v is map && v.keys().hasOnly(['id', 'label', 'price']) && v.keys().hasAll(['id', 'label', 'price'])
+        && v.id is string && v.id.matches('[a-z0-9]{1,12}')
+        && str(v.label, 1, 60)
+        && rupees(v.price);
+    }
+
+    // Rules can't loop, so check each of the (max 8) options by position.
+    function validVariants(vs) {
+      return vs is list && vs.size() >= 1 && vs.size() <= 8
+        && validVariant(vs[0])
+        && (vs.size() < 2 || validVariant(vs[1]))
+        && (vs.size() < 3 || validVariant(vs[2]))
+        && (vs.size() < 4 || validVariant(vs[3]))
+        && (vs.size() < 5 || validVariant(vs[4]))
+        && (vs.size() < 6 || validVariant(vs[5]))
+        && (vs.size() < 7 || validVariant(vs[6]))
+        && (vs.size() < 8 || validVariant(vs[7]));
+    }
+
+    function validNotes(ns) {
+      return ns is list && ns.size() <= 5
+        && (ns.size() < 1 || str(ns[0], 1, 200))
+        && (ns.size() < 2 || str(ns[1], 1, 200))
+        && (ns.size() < 3 || str(ns[2], 1, 200))
+        && (ns.size() < 4 || str(ns[3], 1, 200))
+        && (ns.size() < 5 || str(ns[4], 1, 200));
+    }
+
+    function validProduct(slug) {
+      let d = request.resource.data;
+      let keys = ['name', 'collection', 'design', 'price', 'unit', 'variants', 'setInfo', 'notes', 'family', 'tone', 'sort', 'active', 'bestseller', 'updatedAt'];
+      return slugOk(slug, 60)
+        && d.keys().hasOnly(keys) && d.keys().hasAll(keys)
+        && str(d.name, 2, 120)
+        && d.collection in ['candles', 'diwali']
+        && (d.design == null || (d.design is int && d.design >= 1 && d.design <= 999))
+        && rupees(d.price)
+        && d.unit in ['', 'each', 'per pack']
+        && validVariants(d.variants)
+        && str(d.setInfo, 0, 200)
+        && validNotes(d.notes)
+        && (d.family == '' || slugOk(d.family, 40))
+        && d.tone is string && d.tone.matches('#[0-9a-fA-F]{6}')
+        && d.sort is int && d.sort >= 0 && d.sort <= 100000
+        && d.active is bool
+        && d.bestseller is bool
+        && d.updatedAt == request.time;
+    }
+
+    // Public read: the website build fetches the catalogue (it's shown publicly anyway). Owner-only writes.
+    match /products/{slug} {
+      allow read: if true;
+      allow create, update: if isAdmin() && validProduct(slug);
+      allow delete: if isAdmin();
     }
 
     match /users/{uid} {

@@ -1,0 +1,26 @@
+---
+import PolicyPage from '../components/PolicyPage.astro';
+import { OFFERS } from '../config';
+---
+
+<PolicyPage title="Terms & Conditions" description="Terms for ordering handmade candles from Melt & Box Co." updated="13 October 2026">
+  <p>By using this website and placing an order, you agree to these terms.</p>
+
+  <h2>How ordering works</h2>
+  <p>Placing an order on the website is a request — nothing is confirmed yet. We contact you on your WhatsApp number with the final total (including any shipping charge), and your order is confirmed only after that conversation and your payment. For any question, change or cancellation, contact us directly on WhatsApp or by phone; changes and cancellations take effect once we've confirmed them with you. We may decline an order, for example if a design isn't available or a price was shown wrongly; any payment you made is refunded in full.</p>
+
+  <h2>Products</h2>
+  <p>Product photos are reference images. Handmade items vary slightly in colour, size and finish, and custom colours are matched as closely as possible.</p>
+
+  <h2>Prices</h2>
+  <p>All prices are in Indian Rupees (₹). Prices and offers can change without notice; the price confirmed on WhatsApp for your order applies. Prices may vary with size and custom decor.</p>
+
+  <h2>Offers</h2>
+  <p>The free mini candle (orders above ₹{OFFERS.freeMiniCandleAbove}) and free shipping (above ₹{OFFERS.freeShippingAbove}) apply to regular website orders, not bulk enquiries. We may change or end offers at any time.</p>
+
+  <h2>Candle safety</h2>
+  <p>Candles involve an open flame. Never leave a burning candle unattended, and keep it away from children, pets and anything flammable. We aren't liable for misuse.</p>
+
+  <h2>Governing law</h2>
+  <p>These terms are governed by the laws of India.</p>
+</PolicyPage>

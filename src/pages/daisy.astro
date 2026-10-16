@@ -1,0 +1,70 @@
+---
+// Daisy landing page: every daisy product (categories 'daisy-sets' + 'daisy'). Colours are handled by the
+// "Make your own" custom message, not a colour picker.
+import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import ProductCard from '../components/ProductCard.astro';
+import MakeYourOwn from '../components/MakeYourOwn.astro';
+import Icon from '../components/Icon.astro';
+import { CATEGORIES, formatINR } from '../data/products';
+import { inCategory } from '../data/catalog';
+import { getImage } from 'astro:assets';
+import { photo } from '../lib/images';
+
+const groups = (['daisy-sets', 'daisy'] as const).map((id) => ({ id, ...CATEGORIES[id], items: inCategory(id) })).filter((g) => g.items.length);
+const all = groups.flatMap((g) => g.items);
+const from = Math.min(...all.map((p) => Math.min(...p.variants.map((v) => v.price))));
+const heroSlug = all.find((p) => p.slug === 'daisy-tealight-red-yellow')?.slug ?? all[0].slug;
+const heroTone = all.find((p) => p.slug === heroSlug)!.tone;
+const og = await getImage({ src: photo(heroSlug), width: 720, format: 'jpg', quality: 70 });
+---
+
+<Base
+  title="Daisy Candles & Tealight Sets"
+  description={`Handmade daisy candles, daisy tealight packs and mini-daisy gift sets from ${formatINR(from)}. Any colour, any set size — made to order.`}
+  image={og.src}
+>
+  <PageHero
+    eyebrow="The daisy collection"
+    title="Daisy candles & tealight sets"
+    lede={`Little daisies for thalis, return gifts and cosy corners — from ${formatINR(from)}. Pick a ready set, or tell us the colours and set size you want.`}
+    image={heroSlug}
+    tone={heroTone}
+  >
+    <a href="#daisies" class="btn">See all daisies <Icon name="arrow" /></a>
+    <a href="#custom" class="btn btn-ghost">Make your own</a>
+  </PageHero>
+
+  <div id="daisies">
+    {
+      groups.map((g) => (
+        <section class="section wrap daisy-group">
+          <div class="section-head">
+            <div>
+              <h2>{g.title}</h2>
+              <p>{g.blurb}</p>
+            </div>
+            <a href={`/collections/${g.id}/`} class="btn btn-sm btn-ghost">
+              View category
+            </a>
+          </div>
+          <div class="grid">
+            {g.items.map((p) => (
+              <ProductCard product={p} />
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+
+  <section class="section wrap" id="custom">
+    <MakeYourOwn />
+  </section>
+</Base>
+
+<style>
+  .daisy-group + .daisy-group {
+    padding-top: 0;
+  }
+</style>

@@ -2,6 +2,18 @@
 // Owner-only order dashboard. The only page allowed to load the Firebase SDK (see CLAUDE.md).
 import Base from '../layouts/Base.astro';
 import GoogleButton from '../components/GoogleButton.astro';
+import { CATALOG_FROM_FIRESTORE } from '../config';
+import { CATALOG_SOURCE, LIVE_DOCS } from '../data/catalog';
+import { COLLECTIONS, COLLECTION_IDS } from '../data/products';
+import { photos } from '../lib/images';
+
+// What this build put on the website — the Products tab diffs Firestore against it ("not live yet").
+const liveCatalog = JSON.stringify({
+  builtAt: new Date().toISOString(),
+  source: CATALOG_SOURCE,
+  live: LIVE_DOCS,
+  photos: Object.keys(photos),
+}).replace(/</g, '\\u003c');
 ---
 
 <Base title="Orders" noindex bare>
@@ -28,6 +40,12 @@ import GoogleButton from '../components/GoogleButton.astro';
 
     <!-- Dashboard -->
     <section data-dash hidden>
+      <nav class="views" aria-label="Sections" hidden={!CATALOG_FROM_FIRESTORE}>
+        <button type="button" data-view="orders" aria-pressed="true">Orders</button>
+        <button type="button" data-view="products" aria-pressed="false">Products <span class="views-n" data-products-n></span></button>
+      </nav>
+
+      <div data-pane="orders">
       <details class="card settings" data-settings>
         <summary><span class="serif">Shop settings</span> <span class="muted">· UPI ID: <b data-upi-current>not set</b></span></summary>
         <form class="settings-form" data-settings-form>
@@ -47,8 +65,132 @@ import GoogleButton from '../components/GoogleButton.astro';
         <input class="input search" data-search type="search" placeholder="Search name, phone or order ID" />
       </div>
       <div class="orders" data-orders></div>
+      </div>
+
+      <!-- Products -->
+      {CATALOG_FROM_FIRESTORE && (<div data-pane="products" hidden>
+        <div class="card import" data-import hidden>
+          <h2 class="serif">Move the catalogue here</h2>
+          <p>
+            Your products are still stored in the website code. Import them once and you can edit names, prices and options here. The website
+            will look the same.
+          </p>
+          <button type="button" class="btn btn-sm btn-rose" data-import-btn>Import current catalogue</button>
+          <p class="muted hint" data-import-msg role="status"></p>
+        </div>
+
+        <div class="card pub" data-pub>
+          <div class="pub-head">
+            <div>
+              <b class="serif">Website</b>
+              <span data-pub-summary></span>
+            </div>
+            <button type="button" class="btn btn-sm btn-rose" data-pub-btn disabled>Publish to website</button>
+          </div>
+          <ul class="pub-list" data-pub-list></ul>
+          <p class="hint" data-pub-msg role="status"></p>
+          <p class="muted hint">
+            Publish is for changes to existing products (prices, names, options, hide/show, order). New products go live by themselves once
+            their photo is pushed — follow the steps on their card.
+          </p>
+          <p class="muted hint" data-pub-built></p>
+        </div>
+
+        <div class="waiting" data-waiting></div>
+
+        <div class="ptools">
+          <input class="input search" data-psearch type="search" placeholder="Search products" />
+          <button type="button" class="btn btn-sm" data-add>+ Add product</button>
+        </div>
+        <div class="plist" data-plist><p class="empty">Loading products…</p></div>
+      </div>)}
     </section>
   </div>
+
+  {CATALOG_FROM_FIRESTORE && (<dialog class="pdlg" data-pdlg aria-labelledby="pdlg-title">
+    <form class="pform" data-pform novalidate>
+      <h2 class="serif" id="pdlg-title" data-ptitle>Edit product</h2>
+      <p class="muted hint">Saving stores the change here. Existing products change on the website when you click <b>Publish to website</b>.</p>
+
+      <div class="field">
+        <label for="p-name">Name</label>
+        <input class="input" id="p-name" maxlength="120" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="p-slug">Link &amp; photo name</label>
+        <input class="input mono" id="p-slug" maxlength="60" spellcheck="false" autocomplete="off" />
+        <small class="muted" data-slug-hint></small>
+      </div>
+      <div class="prow">
+        <div class="field">
+          <label for="p-col">Collection</label>
+          <select class="input" id="p-col">
+            {COLLECTION_IDS.map((id) => <option value={id}>{COLLECTIONS[id].title}</option>)}
+          </select>
+        </div>
+        <div class="field">
+          <label for="p-design">Design no. <span class="muted">(optional)</span></label>
+          <input class="input" id="p-design" type="number" min="1" max="999" step="1" inputmode="numeric" />
+        </div>
+      </div>
+      <div class="prow">
+        <div class="field">
+          <label for="p-price">Headline price (₹)</label>
+          <input class="input" id="p-price" type="number" min="1" max="100000" step="1" inputmode="numeric" />
+        </div>
+        <div class="field">
+          <label for="p-unit">Price unit</label>
+          <select class="input" id="p-unit">
+            <option value="">none (₹199/-)</option>
+            <option value="each">each (₹25/- each)</option>
+            <option value="per pack">per pack (₹50/- per pack)</option>
+          </select>
+        </div>
+      </div>
+
+      <fieldset class="pvars">
+        <legend>Options customers can pick <span class="muted">(1–8)</span></legend>
+        <div class="pvar-list" data-pvars></div>
+        <button type="button" class="btn btn-sm btn-ghost" data-add-var>+ Add option</button>
+      </fieldset>
+
+      <div class="field">
+        <label for="p-setinfo">Line under the photo <span class="muted">(optional)</span></label>
+        <input class="input" id="p-setinfo" maxlength="200" placeholder="e.g. Set of 2: ₹500 • Set of 3: ₹700 • Colours and sets customisable" />
+      </div>
+      <div class="field">
+        <label for="p-notes">Notes <span class="muted">(optional, one per line, max 5)</span></label>
+        <textarea class="input" id="p-notes" rows="2"></textarea>
+      </div>
+      <div class="prow">
+        <div class="field">
+          <label for="p-family">Colour family <span class="muted">(optional)</span></label>
+          <input class="input mono" id="p-family" maxlength="40" list="p-families" spellcheck="false" autocomplete="off" placeholder="e.g. latte" />
+          <datalist id="p-families" data-families></datalist>
+        </div>
+        <div class="field">
+          <label for="p-sort">Position <span class="muted">(lower = first)</span></label>
+          <input class="input" id="p-sort" type="number" min="0" max="100000" step="1" inputmode="numeric" />
+        </div>
+        <div class="field">
+          <label for="p-tone">Placeholder colour</label>
+          <input class="input tone" id="p-tone" type="color" />
+        </div>
+      </div>
+      <div class="pchecks">
+        <label><input type="checkbox" id="p-active" /> Show on website</label>
+        <label><input type="checkbox" id="p-best" /> Bestseller (home page)</label>
+      </div>
+
+      <ul class="perr" data-perr role="alert"></ul>
+      <footer class="pfoot">
+        <button type="button" class="btn btn-sm btn-ghost pdel" data-pdelete hidden>Delete</button>
+        <span></span>
+        <button type="button" class="btn btn-sm btn-ghost" data-pcancel>Cancel</button>
+        <button type="submit" class="btn btn-sm btn-rose" data-psave>Save</button>
+      </footer>
+    </form>
+  </dialog>)}
 
   <template id="order-tpl">
     <article class="card order">
@@ -99,6 +241,7 @@ import GoogleButton from '../components/GoogleButton.astro';
   </template>
 </Base>
 
+<script is:inline type="application/json" id="live-catalog" set:html={liveCatalog} />
 <script src="../scripts/admin.ts"></script>
 
 <style>
@@ -242,6 +385,309 @@ import GoogleButton from '../components/GoogleButton.astro';
     flex: 1 1 240px;
     min-height: 40px;
     padding: 8px 12px;
+  }
+  .views {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .views button {
+    padding: 8px 18px;
+    border: 1.5px solid var(--sand);
+    border-radius: 999px;
+    background: var(--paper);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .views button[aria-pressed='true'] {
+    background: var(--cocoa);
+    color: var(--paper);
+    border-color: var(--cocoa);
+  }
+  .views[hidden] {
+    display: none;
+  }
+  .views-n:empty {
+    display: none;
+  }
+  .views-n {
+    display: inline-block;
+    min-width: 1.4em;
+    margin-left: 4px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--rose);
+    color: var(--paper);
+    font-size: 0.75rem;
+  }
+  [data-pane][hidden] {
+    display: none;
+  }
+  .import,
+  .pub {
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    display: grid;
+    gap: 8px;
+  }
+  .import[hidden] {
+    display: none;
+  }
+  .import .btn {
+    justify-self: start;
+  }
+  .import h2 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+  .import p,
+  .pub p {
+    margin: 0;
+  }
+  .hint {
+    font-size: 0.82rem;
+  }
+  .hint:empty {
+    display: none;
+  }
+  .pub-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .pub-head .serif {
+    font-size: 1.15rem;
+    margin-right: 6px;
+  }
+  .pub-list:empty {
+    display: none;
+  }
+  .pub-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.88rem;
+  }
+  .waiting {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .waiting:empty {
+    display: none;
+  }
+  .waiting :global(.wait) {
+    padding: 16px 18px;
+    border-color: var(--warn-line, #e2b65a);
+    background: var(--warn-bg, #fffaf0);
+  }
+  .waiting :global(.wait h3) {
+    margin: 0 0 8px;
+    font-size: 1rem;
+  }
+  .waiting :global(.wait ol) {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 6px;
+    font-size: 0.9rem;
+  }
+  .waiting :global(.wait p) {
+    margin: 10px 0 0;
+    font-size: 0.8rem;
+  }
+  .waiting :global(code),
+  .plist :global(code),
+  .pform :global(code) {
+    background: var(--blush);
+    padding: 1px 6px;
+    border-radius: 4px;
+    user-select: all;
+  }
+  .waiting :global(.copy) {
+    margin-left: 6px;
+    padding: 2px 8px;
+    border: 1px solid var(--sand);
+    border-radius: 6px;
+    background: var(--paper);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .ptools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .plist {
+    display: grid;
+    gap: 8px;
+  }
+  .plist :global(.prod) {
+    display: grid;
+    grid-template-columns: 14px 1fr auto;
+    align-items: center;
+    gap: 6px 12px;
+    padding: 10px 14px;
+    border-radius: var(--r-sm);
+    background: var(--paper);
+    border: 1px solid var(--sand);
+  }
+  .plist :global(.prod.is-hidden) {
+    opacity: 0.6;
+  }
+  .plist :global(.swatch) {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+  }
+  .plist :global(.prod-main) {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .plist :global(.prod-main small) {
+    color: var(--cocoa-3);
+    font-size: 0.78rem;
+  }
+  .plist :global(.prod-side) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .plist :global(.st) {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--blush-2);
+    white-space: nowrap;
+  }
+  .plist :global(.st-live) {
+    color: var(--ok);
+  }
+  .plist :global(.st-changed),
+  .plist :global(.st-ready),
+  .plist :global(.st-hiding) {
+    background: #fbe7e4;
+    color: #8c2f25;
+  }
+  .plist :global(.st-photo) {
+    background: #fff1cf;
+    color: #7a5200;
+  }
+  .plist :global(.empty) {
+    text-align: center;
+    padding: 30px;
+    color: var(--cocoa-3);
+  }
+  .pdlg {
+    width: min(640px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+    padding: 0;
+    border: 0;
+    border-radius: var(--r);
+    background: var(--paper);
+    color: var(--cocoa);
+    box-shadow: var(--shadow);
+  }
+  .pdlg::backdrop {
+    background: rgb(40 25 20 / 0.45);
+  }
+  .pform {
+    display: grid;
+    gap: 12px;
+    padding: 20px 20px 0;
+  }
+  .pform h2 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+  .pform p {
+    margin: 0;
+  }
+  .mono {
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .prow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .tone {
+    height: 44px;
+    padding: 4px;
+  }
+  .pvars {
+    border: 1px solid var(--sand);
+    border-radius: var(--r-sm);
+    padding: 10px 12px 12px;
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  }
+  .pvars legend {
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0 4px;
+  }
+  .pvar-list {
+    display: grid;
+    gap: 8px;
+  }
+  .pvars :global(.pvar) {
+    display: grid;
+    grid-template-columns: 1fr 100px 36px;
+    gap: 8px;
+    align-items: center;
+  }
+  .pvars :global(.pvar .input) {
+    min-height: 40px;
+    padding: 6px 10px;
+  }
+  .pvars :global(.pvar-x) {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--sand);
+    border-radius: 8px;
+    background: var(--paper);
+    cursor: pointer;
+  }
+  .pchecks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    font-size: 0.9rem;
+  }
+  .perr:empty {
+    display: none;
+  }
+  .perr {
+    margin: 0;
+    padding: 10px 10px 10px 28px;
+    border-radius: 8px;
+    background: #fbe7e4;
+    color: #8c2f25;
+    font-size: 0.85rem;
+  }
+  .pfoot {
+    display: flex;
+    gap: 8px;
+    position: sticky;
+    bottom: 0;
+    margin: 0 -20px;
+    padding: 12px 20px;
+    background: var(--paper);
+    border-top: 1px solid var(--sand);
+  }
+  .pfoot > span {
+    flex: 1;
+  }
+  .pdel {
+    color: #8c2f25;
   }
   .orders {
     display: grid;

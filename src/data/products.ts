@@ -1,8 +1,11 @@
-// Single source of truth for the catalogue. Prices/wording copied from the
-// Melt & Box Co. catalogue PDF — edit here and every page + the cart update.
+// Catalogue types + the SEED catalogue. The live catalogue is the Firestore `products` collection,
+// edited in /admin → Products and read at build time by src/data/catalog.ts. SEED_PRODUCTS is only used
+// for the one-time import into Firestore and as a fallback when Firestore isn't configured / is empty.
 // Photo: src/assets/products/<slug>.jpg. `tone` = average photo colour, used as placeholder.
 
 export type CollectionId = 'candles' | 'diwali';
+export const COLLECTION_IDS: CollectionId[] = ['candles', 'diwali'];
+export const UNITS = ['', 'each', 'per pack'] as const;
 
 export interface Variant {
   id: string;
@@ -22,6 +25,25 @@ export interface Product {
   notes?: string[];
   family?: string; // products sharing a family are shown as "also available in"
   tone: string;
+  bestseller?: boolean; // shown in "Bestsellers" on the home page
+  category?: CategoryId; // shop category; leave empty to let categoryOf() decide from the slug
+}
+
+// One Firestore `products/{slug}` document (see firestore.rules → validProduct).
+export interface ProductDoc {
+  name: string;
+  collection: CollectionId;
+  design: number | null;
+  price: number;
+  unit: (typeof UNITS)[number];
+  variants: Variant[];
+  setInfo: string;
+  notes: string[];
+  family: string;
+  tone: string;
+  sort: number; // display order (ascending)
+  active: boolean; // false = hidden from the website
+  bestseller: boolean;
 }
 
 export const COLLECTIONS: Record<CollectionId, { title: string; blurb: string }> = {
@@ -34,6 +56,30 @@ export const COLLECTIONS: Record<CollectionId, { title: string; blurb: string }>
     blurb: 'A little light, a lot of warmth. Perfect for festive hampers, corporate gifting, return gifts and guest presents.',
   },
 };
+
+// Shop categories — a finer grouping than the two catalogue collections. Each gets a /collections/<id>/ page.
+// A product's category is `category` if set, otherwise guessed from its slug (categoryOf).
+export type CategoryId = 'jars' | 'urli-diya' | 'daisy' | 'daisy-sets' | 'tealights' | 'shapes';
+export const CATEGORIES: Record<CategoryId, { title: string; short: string; blurb: string; cover: string }> = {
+  jars: { title: 'Jar & Latte Candles', short: 'Jars & Lattes', blurb: 'Glass jar candles, iced-latte cups and kulhads — poured by hand in small batches.', cover: 'golden-hour' },
+  'urli-diya': { title: 'Urlis & Diyas', short: 'Urlis & Diyas', blurb: 'Floral urlis, lotus bowls and clay diyas for pooja thalis, entrances and festive tables.', cover: 'laxmi-padam-lotus-urli' },
+  daisy: { title: 'Daisy Candles', short: 'Daisies', blurb: 'Single daisy blooms and daisy bouquets in soft colours.', cover: 'daisy-bouquet' },
+  'daisy-sets': { title: 'Daisy Tealight Sets', short: 'Daisy Sets', blurb: 'Daisy tealight packs and mini-daisy gift sets — easy return gifts.', cover: 'daisy-tealight-red-yellow' },
+  tealights: { title: 'Tealight Packs', short: 'Tealights', blurb: 'Rose, lavender and colourful tealight cups, sold in packs.', cover: 'tealight-lavender-rose' },
+  shapes: { title: 'Laddoo, Modak & Fun Shapes', short: 'Fun Shapes', blurb: 'Laddoo and modak candles, sea shells and peony hearts — little candles that look like something else.', cover: 'laddoo-modak-candles' },
+};
+export const CATEGORY_IDS = Object.keys(CATEGORIES) as CategoryId[];
+
+export function categoryOf(p: Pick<Product, 'slug' | 'category'>): CategoryId {
+  if (p.category) return p.category;
+  const s = p.slug;
+  if (/mini-daisy-set|daisy-tealight/.test(s)) return 'daisy-sets';
+  if (/urli|diya|floral-candle/.test(s)) return 'urli-diya';
+  if (/daisy-flower|daisy-bouquet|single-daisy/.test(s)) return 'daisy';
+  if (/tealight/.test(s)) return 'tealights';
+  if (/laddo|modak|shell|heart/.test(s)) return 'shapes';
+  return 'jars';
+}
 
 const single = (price: number): Variant[] => [{ id: 'one', label: 'Single', price }];
 const sets = (one: number, two: number, three: number): Variant[] => [
@@ -52,7 +98,7 @@ const PACKS_LINE = 'Sets of 4, 6, 8, 10, 12; quantities customisable';
 const MINI_SET = 'Pack of 6 mini Daisy tealights + 1 Daisy candle';
 const DAISY_TL = 'Pack of 4 Daisy Tealight candles';
 
-export const PRODUCTS: Product[] = [
+export const SEED_PRODUCTS: Product[] = [
   // ── The Candle Collection ────────────────────────────────────────────────
   { slug: 'rose-petals', name: 'Rose Petals', collection: 'candles', price: 159, variants: single(159), tone: '#9f735e' },
   { slug: 'mango-daisy-jar', name: 'Mango Daisy Jar', collection: 'candles', price: 189, variants: single(189), tone: '#a1917c' },
@@ -114,13 +160,11 @@ export const PRODUCTS: Product[] = [
   ),
 ];
 
-export const bySlug = (slug: string) => PRODUCTS.find((p) => p.slug === slug);
-
 export const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 // Catalogue-style price label: "₹159/-", "₹25/- each"
 export const priceLabel = (p: Product) => `₹${p.price}/-${p.unit ? ` ${p.unit}` : ''}`;
 
-export const BESTSELLERS = [
+export const SEED_BESTSELLERS = [
   'golden-hour',
   'blush-bloom',
   'daisy-urli-bowl-pearls',
@@ -130,3 +174,42 @@ export const BESTSELLERS = [
   'mango-daisy-jar',
   'floral-daisy-pearl-urli',
 ];
+
+export const toDoc = (p: Product, sort: number, active = true): ProductDoc => ({
+  name: p.name,
+  collection: p.collection,
+  design: p.design ?? null,
+  price: p.price,
+  unit: p.unit ?? '',
+  variants: p.variants.map(({ id, label, price }) => ({ id, label, price })),
+  setInfo: p.setInfo ?? '',
+  notes: p.notes ?? [],
+  family: p.family ?? '',
+  tone: p.tone,
+  sort,
+  active,
+  bestseller: !!p.bestseller,
+});
+
+export const fromDoc = (slug: string, d: ProductDoc): Product => ({
+  slug,
+  name: d.name,
+  collection: d.collection,
+  ...(d.design != null && { design: d.design }),
+  price: d.price,
+  ...(d.unit && { unit: d.unit }),
+  variants: d.variants.map(({ id, label, price }) => ({ id, label, price })),
+  ...(d.setInfo && { setInfo: d.setInfo }),
+  ...(d.notes.length && { notes: d.notes }),
+  ...(d.family && { family: d.family }),
+  tone: d.tone,
+  ...(d.bestseller && { bestseller: true }),
+});
+
+/** The seed catalogue as Firestore documents (positions 10, 20, 30… leave room to insert). */
+export const seedDocs = (): [string, ProductDoc][] =>
+  SEED_PRODUCTS.map((p, i) => [p.slug, toDoc({ ...p, bestseller: SEED_BESTSELLERS.includes(p.slug) }, (i + 1) * 10)]);
+
+/** Stable string of everything that affects the website — used by /admin to spot unpublished changes. */
+export const fingerprint = (d: ProductDoc) =>
+  JSON.stringify([d.name, d.collection, d.design, d.price, d.unit, d.variants.map((v) => [v.id, v.label, v.price]), d.setInfo, d.notes, d.family, d.tone, d.sort, d.active, d.bestseller]);

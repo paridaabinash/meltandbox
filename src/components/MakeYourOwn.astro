@@ -1,0 +1,154 @@
+---
+// "Make your own" custom-candle pitch: what customers can change, + WhatsApp CTA.
+// Used on home (full) and every product page (compact, with the product name in the WhatsApp message).
+import Icon from './Icon.astro';
+import { waLink } from '../config';
+
+interface Props {
+  /** Product name — compact product-page version, pre-fills the WhatsApp message. */
+  product?: string;
+  productUrl?: string;
+}
+const { product, productUrl } = Astro.props;
+const compact = !!product;
+
+const ideas = [
+  { icon: 'sparkle', t: 'Different colours', d: 'Match your décor, wedding palette or festival theme.' },
+  { icon: 'flame', t: 'A different shape', d: 'Daisy, rose, peony, lotus, heart, shell, diya, laddoo and more.' },
+  { icon: 'bag', t: 'Your own set', d: 'Mix designs in one box, or order a bigger or smaller pack.' },
+  { icon: 'gift', t: 'Scent & packaging', d: 'Pick a fragrance and gift-ready packaging for the occasion.' },
+] as const;
+
+const msg = product
+  ? `Hi Melt & Box Co.! I'd like a custom version of "${product}". ${productUrl ?? ''}\nColours / shape / set I have in mind: `
+  : `Hi Melt & Box Co.! I'd like to make my own custom candles.\nColours / shape / set I have in mind: `;
+const Heading = compact ? 'p' : 'h2';
+---
+
+<div class:list={['myo', { compact }]}>
+  <p class="eyebrow">Make your own</p>
+  <Heading class="myo-h serif">{compact ? 'Want it a little different?' : 'Make your own custom candles'}</Heading>
+  <p class="myo-lede">
+    {
+      compact
+        ? 'Every candle is made to order, so you can change almost anything about this one.'
+        : 'Every candle is made to order, so you can change almost anything. Tell us what you have in mind and we’ll suggest what works.'
+    }
+  </p>
+  <ul class="myo-ideas">
+    {
+      ideas.map((i) => (
+        <li>
+          <span class="myo-ic"><Icon name={i.icon} size={18} /></span>
+          <span>
+            <b>{i.t}</b>
+            {i.d}
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+  <div class="myo-cta">
+    <a href={waLink(msg)} class:list={['btn', compact ? 'btn-ghost btn-block' : 'btn-wa']} target="_blank" rel="noopener">
+      <Icon name="whatsapp" />
+      {compact ? 'Ask / customise on WhatsApp' : 'Plan my custom candle'}
+    </a>
+    <slot />
+  </div>
+  <p class="myo-fine">Prices may vary with size and custom decor. We confirm the final price on WhatsApp before you pay.</p>
+</div>
+
+<style>
+  .myo-h {
+    font-size: clamp(1.7rem, 4vw, 2.5rem);
+  }
+  .compact .myo-h {
+    font-size: 1.3rem;
+    margin-bottom: 0.3em;
+  }
+  .myo-lede {
+    color: var(--cocoa-2);
+    font-size: 1.05rem;
+    max-width: 52ch;
+  }
+  .compact .myo-lede {
+    font-size: 0.95rem;
+    margin-bottom: 0.8em;
+  }
+  .myo-ideas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 10px;
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+  }
+  .myo-ideas li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px;
+    border-radius: var(--r);
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    font-size: 0.9rem;
+    color: var(--cocoa-2);
+    line-height: 1.45;
+  }
+  .myo-ideas b {
+    display: block;
+    color: var(--cocoa);
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+  }
+  .myo-ic {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--blush);
+    color: var(--rose);
+  }
+  .compact .myo-ideas {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .compact .myo-ideas li {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    font-size: 0.82rem;
+  }
+  .compact .myo-ideas b {
+    font-size: 0.88rem;
+  }
+  .compact .myo-ic {
+    width: 30px;
+    height: 30px;
+  }
+  .myo-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .myo-fine {
+    margin: 12px 0 0;
+    font-size: 0.8rem;
+    color: var(--cocoa-3);
+  }
+  .compact {
+    padding: 18px;
+    border-radius: var(--r);
+    background: var(--blush);
+  }
+  .compact .myo-ideas li {
+    background: var(--paper);
+    border-color: transparent;
+  }
+  .compact .myo-ic {
+    background: var(--blush);
+  }
+</style>

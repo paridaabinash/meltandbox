@@ -1,14 +1,13 @@
 ---
 import Base from '../layouts/Base.astro';
 import ProductCard from '../components/ProductCard.astro';
-import { COLLECTIONS, PRODUCTS, type CollectionId } from '../data/products';
+import { CATEGORIES } from '../data/products';
+import { CATEGORY_GROUPS, PRODUCTS } from '../data/catalog';
 import { OFFERS } from '../config';
 
-const groups = (Object.keys(COLLECTIONS) as CollectionId[]).map((id) => ({
-  id,
-  ...COLLECTIONS[id],
-  items: PRODUCTS.filter((p) => p.collection === id),
-}));
+const groups = CATEGORY_GROUPS.map((g) => ({ ...g, ...CATEGORIES[g.id] }));
+// CSS-only filter: when chip X is checked, hide every other category section.
+const filterCss = groups.map((g) => `.shop:has(#f-${g.id}:checked) [data-group]:not([data-group='${g.id}'])`).join(',') + '{display:none}';
 ---
 
 <Base title="Shop all candles" description="Shop handmade candles, floral urlis, daisy candles and the Diwali candle collection from Melt & Box Co.">
@@ -23,7 +22,7 @@ const groups = (Object.keys(COLLECTIONS) as CollectionId[]).map((id) => ({
 
     <!-- CSS-only filter (radio + :has) — no JS -->
     <div class="filters-bar">
-      <div class="wrap filters" role="radiogroup" aria-label="Filter collection">
+      <div class="wrap filters" role="radiogroup" aria-label="Filter by category">
         <input type="radio" name="f" id="f-all" value="all" checked />
         <label for="f-all">All <span>{PRODUCTS.length}</span></label>
         {
@@ -31,7 +30,7 @@ const groups = (Object.keys(COLLECTIONS) as CollectionId[]).map((id) => ({
             <>
               <input type="radio" name="f" id={`f-${g.id}`} value={g.id} />
               <label for={`f-${g.id}`}>
-                {g.id === 'diwali' ? 'Diwali' : 'Candle Collection'} <span>{g.items.length}</span>
+                {g.short} <span>{g.items.length}</span>
               </label>
             </>
           ))
@@ -47,6 +46,9 @@ const groups = (Object.keys(COLLECTIONS) as CollectionId[]).map((id) => ({
               <h2>{g.title}</h2>
               <p>{g.blurb}</p>
             </div>
+            <a href={`/collections/${g.id}/`} class="btn btn-ghost btn-sm">
+              View all
+            </a>
           </div>
           <div class="grid">
             {g.items.map((p, i) => (
@@ -126,14 +128,11 @@ const groups = (Object.keys(COLLECTIONS) as CollectionId[]).map((id) => ({
     padding-top: clamp(32px, 5vw, 56px);
     scroll-margin-top: calc(var(--header-h) + 70px);
   }
-  .shop:has(#f-candles:checked) [data-group='diwali'],
-  .shop:has(#f-diwali:checked) [data-group='candles'] {
-    display: none;
-  }
 </style>
+<style is:inline set:html={filterCss}></style>
 
 <script>
-  // Deep links (/shop/#diwali) pre-select the matching filter chip.
+  // Deep links (/shop/#daisy) pre-select the matching filter chip.
   const sync = () => {
     const r = document.getElementById(`f-${location.hash.slice(1)}`) as HTMLInputElement | null;
     if (r) r.checked = true;

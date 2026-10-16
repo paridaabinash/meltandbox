@@ -1,7 +1,28 @@
 ---
-// Native <dialog> drawer; contents rendered by src/scripts/cart.ts from localStorage.
+// Native <dialog> drawer + sticky "cart bar"; contents rendered by src/scripts/cart.ts from localStorage.
+// Adding to cart never opens the drawer — the cart bar at the bottom shows what's in it; tapping it (or the
+// header bag) opens the drawer.
 import Icon from './Icon.astro';
 import { OFFERS } from '../config';
+import { PRODUCTS } from '../data/catalog';
+import { formatINR } from '../data/products';
+import { thumbUrl } from '../lib/images';
+
+const onCheckout = Astro.url.pathname.startsWith('/checkout');
+
+// "Add a little extra": the cheapest small candles (one per colour family), cheapest option of each.
+const seen = new Set<string>();
+const addons = PRODUCTS.map((p) => ({ p, v: p.variants.reduce((a, b) => (b.price < a.price ? b : a)) }))
+  .filter((x) => x.v.price <= 80)
+  .sort((a, b) => a.v.price - b.v.price)
+  .filter(({ p }) => {
+    const fam = p.family || p.slug;
+    if (seen.has(fam)) return false;
+    seen.add(fam);
+    return true;
+  })
+  .slice(0, 6);
+const addonThumbs = await Promise.all(addons.map(({ p }) => thumbUrl(p.slug)));
 ---
 
 <dialog class="drawer" data-cart-drawer aria-label="Your cart">
@@ -16,7 +37,45 @@ import { OFFERS } from '../config';
       <div class="bar"><span data-cart-bar></span><i style={`left:${(OFFERS.freeMiniCandleAbove / OFFERS.freeShippingAbove) * 100}%`} title="Free mini candle"></i></div>
     </div>
 
-    <ul class="d-list" data-cart-list></ul>
+    <div class="d-scroll">
+      <ul class="d-list" data-cart-list></ul>
+
+      {
+        addons.length > 0 && (
+          <section class="addons" data-addons aria-label="Small candles to add">
+            <p class="addons-h">Psst… these fit perfectly in your box <span>· from {formatINR(addons[0].v.price)}</span></p>
+            <ul class="addons-row">
+              {addons.map(({ p, v }, i) => (
+                <li class="addon" data-addon-k={`${p.slug}:${v.id}`}>
+                  <a href={`/product/${p.slug}/`} class="addon-img">
+                    <img src={addonThumbs[i]} width="72" height="72" alt={p.name} loading="lazy" decoding="async" style={`background:${p.tone}`} />
+                  </a>
+                  <span class="addon-name">{p.name}</span>
+                  <span class="addon-price">
+                    {formatINR(v.price)}
+                    {p.variants.length > 1 && <small>{v.label}</small>}
+                  </span>
+                  <button
+                    type="button"
+                    class="addon-add"
+                    data-add
+                    data-slug={p.slug}
+                    data-v={v.id}
+                    data-vl={v.label}
+                    data-name={p.name}
+                    data-price={v.price}
+                    data-img={addonThumbs[i]}
+                    aria-label={`Add ${p.name} (${v.label}) to cart`}
+                  >
+                    <Icon name="plus" size={16} /> Add
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+    </div>
 
     <div class="d-empty" data-cart-empty>
       <Icon name="flame" size={40} />
@@ -27,10 +86,27 @@ import { OFFERS } from '../config';
     <div class="d-foot" data-cart-foot>
       <div class="d-row"><span>Subtotal</span><strong data-cart-subtotal>₹0</strong></div>
       <p class="d-small muted">Shipping is free above ₹{OFFERS.freeShippingAbove}. Below that, charges are shared when we confirm your order.</p>
-      <a href="/checkout/" class="btn btn-rose btn-block">Checkout <Icon name="arrow" /></a>
+      <a href="/checkout/" class="btn btn-rose btn-block">Checkout · <span data-cart-subtotal>₹0</span> <Icon name="arrow" /></a>
     </div>
   </div>
 </dialog>
+
+{
+  !onCheckout && (
+    <div class="cartbar" data-cartbar hidden>
+      <button type="button" class="cartbar-in" data-cart-open>
+        <span class="cb-thumbs" data-cb-thumbs aria-hidden="true" />
+        <span class="cb-text">
+          <b data-cb-count>0 items</b>
+          <span data-cb-sub>₹0</span>
+        </span>
+        <span class="cb-go">
+          View cart <Icon name="arrow" size={18} />
+        </span>
+      </button>
+    </div>
+  )
+}
 
 <script src="../scripts/cart.ts"></script>
 
@@ -118,13 +194,100 @@ import { OFFERS } from '../config';
     background: var(--paper);
     border: 2px solid var(--gold);
   }
-  .d-list {
+  .d-scroll {
     flex: 1;
     overflow-y: auto;
+  }
+  .d-list {
     list-style: none;
     margin: 0;
     padding: 4px 20px;
   }
+
+  /* add-ons: horizontal strip of cheap small candles */
+  .addons {
+    margin: 8px 0 16px;
+    padding: 14px 0 4px;
+    border-top: 1px dashed var(--sand);
+  }
+  .addons-h {
+    margin: 0 20px 10px;
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+  .addons-h span {
+    font-weight: 400;
+    color: var(--cocoa-3);
+  }
+  .addons-row {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+    padding: 0 20px 8px;
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 20px;
+    scrollbar-width: none;
+  }
+  .addon {
+    flex: none;
+    width: 128px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    border-radius: var(--r-sm);
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    scroll-snap-align: start;
+  }
+  .addon-img img {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    object-fit: cover;
+  }
+  .addon-name {
+    font-size: 0.8rem;
+    line-height: 1.3;
+    min-height: 2.6em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .addon-price {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--rose);
+  }
+  .addon-price small {
+    display: block;
+    font-weight: 400;
+    font-size: 0.72rem;
+    color: var(--cocoa-3);
+  }
+  .addon-add {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 34px;
+    border: 1.5px solid var(--rose);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--rose);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .addon-add:hover {
+    background: var(--rose);
+    color: #fff;
+  }
+
   .d-empty {
     flex: 1;
     display: none;
@@ -143,7 +306,7 @@ import { OFFERS } from '../config';
   .drawer.is-empty .d-empty {
     display: flex;
   }
-  .drawer.is-empty .d-list,
+  .drawer.is-empty .d-scroll,
   .drawer.is-empty .d-foot,
   .drawer.is-empty .d-progress {
     display: none;
@@ -161,5 +324,124 @@ import { OFFERS } from '../config';
   .d-small {
     font-size: 0.78rem;
     margin: 4px 0 12px;
+  }
+
+  /* sticky cart bar (Zepto/Swiggy style) */
+  .cartbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 0 12px calc(10px + env(safe-area-inset-bottom));
+    pointer-events: none;
+  }
+  .cartbar-in {
+    pointer-events: auto;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 8px 7px 12px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--cocoa);
+    color: var(--paper);
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    text-align: left;
+    animation: bar-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .cartbar.bump .cartbar-in {
+    animation: bar-bump 0.35s ease;
+  }
+  @keyframes bar-up {
+    from {
+      transform: translateY(120%);
+    }
+  }
+  @keyframes bar-bump {
+    40% {
+      transform: scale(1.03);
+    }
+  }
+  .cb-thumbs {
+    display: flex;
+    flex: none;
+    gap: 8px;
+    padding-top: 4px;
+  }
+  .cb-thumbs :global(.cb-t) {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--sand);
+  }
+  .cb-thumbs :global(.cb-t img) {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+  }
+  .cb-thumbs :global(.cb-t i) {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    box-shadow: 0 0 0 2px var(--cocoa);
+    border-radius: 99px;
+    background: var(--rose);
+    color: #fff;
+    font: 700 0.64rem/18px var(--sans);
+    font-style: normal;
+    text-align: center;
+  }
+  .cb-thumbs :global(.cb-more) {
+    display: grid;
+    place-items: center;
+    font: 700 0.75rem var(--sans);
+    background: var(--cocoa-2);
+    color: var(--paper);
+  }
+  .cb-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    color: var(--gold-2);
+  }
+  .cb-text b {
+    font-size: 0.95rem;
+    color: var(--paper);
+  }
+  .cb-go {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border-radius: 11px;
+    background: var(--rose);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  :global(body.has-cartbar) {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cartbar-in,
+    .cartbar.bump .cartbar-in,
+    .drawer[open] {
+      animation: none;
+    }
   }
 </style>

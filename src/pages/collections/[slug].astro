@@ -1,0 +1,68 @@
+---
+// One page per shop category (src/data/products.ts → CATEGORIES): shareable links like /collections/daisy/.
+import type { GetStaticPaths } from 'astro';
+import Base from '../../layouts/Base.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import CategoryTiles from '../../components/CategoryTiles.astro';
+import MakeYourOwn from '../../components/MakeYourOwn.astro';
+import { CATEGORIES, type CategoryId } from '../../data/products';
+import { CATEGORY_GROUPS } from '../../data/catalog';
+import { OFFERS } from '../../config';
+
+export const getStaticPaths = (() => CATEGORY_GROUPS.map((g) => ({ params: { slug: g.id }, props: { id: g.id } }))) satisfies GetStaticPaths;
+
+const { id } = Astro.props as { id: CategoryId };
+const cat = CATEGORIES[id];
+const items = CATEGORY_GROUPS.find((g) => g.id === id)!.items;
+---
+
+<Base title={cat.title} description={`${cat.blurb} Handmade to order by Melt & Box Co. Free mini candle above ₹${OFFERS.freeMiniCandleAbove}.`}>
+  <nav class="wrap crumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span>/</span><a href="/shop/">Shop</a><span>/</span><span aria-current="page">{cat.title}</span>
+  </nav>
+
+  <header class="wrap col-head">
+    <p class="eyebrow">{items.length} {items.length === 1 ? 'design' : 'designs'} · handmade to order</p>
+    <h1>{cat.title}</h1>
+    <p class="lede">{cat.blurb}</p>
+  </header>
+
+  <section class="wrap">
+    <div class="grid">
+      {items.map((p, i) => <ProductCard product={p} eager={i < 2} />)}
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <MakeYourOwn />
+  </section>
+
+  <section class="wrap more-cats">
+    <h2>More categories</h2>
+    <CategoryTiles except={id} />
+  </section>
+</Base>
+
+<style>
+  .crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 18px;
+    font-size: 0.82rem;
+    color: var(--cocoa-3);
+  }
+  .crumbs a {
+    text-decoration: none;
+  }
+  .col-head {
+    padding-top: clamp(16px, 3vw, 32px);
+    padding-bottom: clamp(20px, 3vw, 32px);
+  }
+  .col-head h1 {
+    margin-bottom: 0.25em;
+  }
+  .more-cats {
+    padding-bottom: clamp(48px, 8vw, 96px);
+  }
+</style>

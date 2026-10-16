@@ -86,7 +86,34 @@ Every `git push` redeploys automatically.
 - A warning appears if an order's prices don't match the current catalogue.
 
 ## Editing products
-All products and prices live in `src/data/products.ts`; photos in `src/assets/products/<slug>.jpg`.
+**Today:** products and prices live in `src/data/products.ts` (`SEED_PRODUCTS`); photos in `src/assets/products/<slug>.jpg`.
+Edit the file, commit, push — Cloudflare rebuilds.
+
+### Product editor in /admin (built, switched OFF)
+Turn it on with `CATALOG_FROM_FIRESTORE = true` in `src/config.ts` — after the one-time setup below. Once on:
+products, prices and options live in Firestore (`products/{slug}`) and are edited in **/admin → Products**.
+The website reads them **at build time**, so pages stay static and fast. Photos stay in the repo: `src/assets/products/<slug>.jpg`.
+
+- **Change an existing product** (price, name, options, notes, position, bestseller, hide/show): Edit → Save →
+  **Publish to website**. The site rebuilds and updates in ~2 minutes. The list shows what's "not live yet".
+- **Add a new product**: + Add product → Save. It stays off the website until its photo exists. Its card in /admin shows the
+  steps: save the photo as `<slug>.jpg` (≈720 px wide), add it to `src/assets/products/`, commit + push to `main`.
+  The push rebuilds the site and the product appears — no Publish needed. (That rebuild also publishes other saved edits.)
+- **Remove a product**: untick **Show on website** → Save → Publish. (Delete is only offered for products that were never live.)
+- The link name (slug) can't change after saving: it's the web address, the photo file name and the id in past orders.
+- Validation runs in the editor and again in `firestore.rules` (`validProduct`); keep `src/data/product-validate.ts` in sync.
+- `src/data/products.ts` keeps the original catalogue as a seed: used for the one-time **Import current catalogue**
+  button and as a fallback when Firebase isn't configured. If Firestore can't be read, the build fails on purpose and
+  Cloudflare keeps the previous version live.
+
+**One-time setup (before switching it on)**
+1. Publish the latest `firestore.rules` (they allow public read of `products`; without this every build fails with HTTP 403).
+2. Cloudflare Pages → your project → **Settings → Builds → Deploy hooks → Add deploy hook** (branch `main`). Copy the URL.
+3. Apps Script → **Project Settings → Script properties → Add**: `DEPLOY_HOOK_URL` = that URL. Paste the latest
+   `apps-script/Code.gs` and deploy a **new version** (Manage deployments → ✏️). Keep the hook URL secret — anyone with it can trigger builds.
+4. Set `CATALOG_FROM_FIRESTORE = true` in `src/config.ts`, commit + push.
+5. /admin → Products → **Import current catalogue** (once). From then on, edit products in /admin, not in `products.ts`.
+
 If you change the ₹599 / ₹999 offers, also update the two numbers in `firestore.rules`.
 
 ## Planned (not built yet)

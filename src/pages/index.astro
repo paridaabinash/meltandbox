@@ -3,14 +3,16 @@ import Base from '../layouts/Base.astro';
 import ProductCard from '../components/ProductCard.astro';
 import ProductImage from '../components/ProductImage.astro';
 import Icon from '../components/Icon.astro';
-import { BESTSELLERS, COLLECTIONS, PRODUCTS, bySlug } from '../data/products';
-import { OFFERS, SITE, waLink } from '../config';
+import MakeYourOwn from '../components/MakeYourOwn.astro';
+import CategoryTiles from '../components/CategoryTiles.astro';
+import { COLLECTIONS } from '../data/products';
+import { BESTSELLERS, PRODUCTS } from '../data/catalog';
+import { OFFERS, SITE } from '../config';
 import { getImage } from 'astro:assets';
 import { photo } from '../lib/images';
 
-const best = BESTSELLERS.map((s) => bySlug(s)!);
+const best = BESTSELLERS;
 const diwali = PRODUCTS.filter((p) => p.collection === 'diwali');
-const candles = PRODUCTS.filter((p) => p.collection === 'candles');
 const og = await getImage({ src: photo('diwali-hero'), width: 720, format: 'jpg', quality: 70 });
 
 const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festive Hampers', 'Personal Gifting', 'Custom Orders'];
@@ -27,7 +29,7 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
         <p class="lede">Small details, warm moments, and candles made to be remembered.</p>
         <div class="hero-cta">
           <a href="/shop/" class="btn">Shop the collection <Icon name="arrow" /></a>
-          <a href="/shop/#diwali" class="btn btn-ghost"><Icon name="flame" /> Diwali collection</a>
+          <a href="/diwali/" class="btn btn-ghost"><Icon name="flame" /> Diwali collection</a>
         </div>
         <ul class="hero-perks">
           <li><Icon name="gift" size={18} /> Free mini candle above ₹{OFFERS.freeMiniCandleAbove}/-</li>
@@ -35,19 +37,20 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
         </ul>
       </div>
 
-      <div class="hero-art" aria-hidden="true">
-        <div class="arch arch-main">
-          <ProductImage slug="diwali-hero" alt="" sizes="(min-width: 900px) 360px, 58vw" tone="#ba6b4e" eager />
-        </div>
-        <div class="arch arch-a">
-          <ProductImage slug="golden-hour" alt="" sizes="(min-width: 900px) 200px, 32vw" tone="#a69b85" />
-        </div>
-        <div class="arch arch-b">
-          <ProductImage slug="blush-bloom" alt="" sizes="(min-width: 900px) 200px, 32vw" tone="#7b472e" />
-        </div>
-        <span class="spark s1"><Icon name="sparkle" size={20} /></span>
-        <span class="spark s2"><Icon name="sparkle" size={14} /></span>
-        <div class="flame-badge">
+      <!-- The three arches open the candle they show (centre = the daisy tealight pack → Daisy collection). -->
+      <div class="hero-art">
+        <a href="/daisy/" class="arch arch-main" aria-label="Daisy tealight candles">
+          <ProductImage slug="diwali-hero" alt="Daisy tealight candle gift pack" sizes="(min-width: 900px) 360px, 58vw" tone="#ba6b4e" eager />
+        </a>
+        <a href="/product/golden-hour/" class="arch arch-a" aria-label="Golden Hour">
+          <ProductImage slug="golden-hour" alt="Golden Hour" sizes="(min-width: 900px) 200px, 32vw" tone="#a69b85" />
+        </a>
+        <a href="/product/blush-bloom/" class="arch arch-b" aria-label="Blush Bloom">
+          <ProductImage slug="blush-bloom" alt="Blush Bloom" sizes="(min-width: 900px) 200px, 32vw" tone="#7b472e" />
+        </a>
+        <span class="spark s1" aria-hidden="true"><Icon name="sparkle" size={20} /></span>
+        <span class="spark s2" aria-hidden="true"><Icon name="sparkle" size={14} /></span>
+        <div class="flame-badge" aria-hidden="true">
           <span class="flame"><i></i></span>
           <span><b>100%</b> handmade<br />with love</span>
         </div>
@@ -65,6 +68,20 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
     </div>
   </section>
 
+  <!-- ── Categories ── -->
+  <section class="section cats">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Find your glow</p>
+          <h2>Shop by category</h2>
+        </div>
+        <a href="/shop/" class="btn btn-sm btn-ghost">Shop all <Icon name="arrow" /></a>
+      </div>
+      <CategoryTiles />
+    </div>
+  </section>
+
   <!-- ── Diwali ── -->
   <section class="section diwali" id="diwali-home">
     <div class="wrap">
@@ -74,10 +91,10 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
           <h2>{COLLECTIONS.diwali.title}</h2>
           <p>A little light, a lot of warmth. Perfect for festive hampers, corporate gifting, return gifts and guest presents.</p>
         </div>
-        <a href="/shop/#diwali" class="btn btn-sm btn-ghost">All {diwali.length} designs <Icon name="arrow" /></a>
+        <a href="/diwali/" class="btn btn-sm btn-ghost">All {diwali.length} designs <Icon name="arrow" /></a>
       </div>
     </div>
-    <div class="rail" role="list">
+    <div class="rail" role="list" aria-label="Diwali designs" data-autoplay>
       {
         diwali.slice(0, 12).map((p) => (
           <div class="rail-item" role="listitem">
@@ -85,7 +102,7 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
           </div>
         ))
       }
-      <a href="/shop/#diwali" class="rail-more rail-item">
+      <a href="/diwali/" class="rail-more rail-item">
         <span class="serif">See all {diwali.length} Diwali designs</span>
         <Icon name="arrow" size={28} />
       </a>
@@ -118,44 +135,13 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
     </div>
   </section>
 
-  <!-- ── Collections ── -->
-  <section class="wrap collections">
-    <a href="/shop/#candles" class="col-card">
-      <ProductImage slug="daisy-urli-bowl-pearls" alt="" sizes="(min-width: 760px) 560px, 92vw" tone="#8d6a5a" class="col-img" />
-      <div class="col-copy">
-        <span class="badge">{candles.length} pieces</span>
-        <h3>{COLLECTIONS.candles.title}</h3>
-        <p>{COLLECTIONS.candles.blurb}</p>
-        <span class="col-link">Explore <Icon name="arrow" size={18} /></span>
-      </div>
-    </a>
-    <a href="/shop/#diwali" class="col-card">
-      <ProductImage slug="laxmi-padam-lotus-urli" alt="" sizes="(min-width: 760px) 560px, 92vw" tone="#5f8499" class="col-img" />
-      <div class="col-copy">
-        <span class="badge">{diwali.length} designs</span>
-        <h3>{COLLECTIONS.diwali.title}</h3>
-        <p>A little light, a lot of warmth — urlis, diyas, tealights and daisy sets.</p>
-        <span class="col-link">Explore <Icon name="arrow" size={18} /></span>
-      </div>
-    </a>
-  </section>
-
   <!-- ── Customisation ── -->
   <section class="section" id="custom">
     <div class="wrap custom">
       <div class="custom-copy">
-        <p class="eyebrow">Customisation</p>
-        <h2>Create your Diwali your way.</h2>
-        <p class="lede">
-          Choose a design, mix and match elements, or share your own reference. We can customise the look to suit your gifting occasion.
-        </p>
-        <p class="muted">Custom colours, scents, decor, and gifting themes are available wherever possible.</p>
-        <div class="hero-cta">
-          <a href={waLink('Hi Melt & Box Co.! I would like to place a custom / bulk order.')} class="btn btn-wa" target="_blank" rel="noopener">
-            <Icon name="whatsapp" /> Chat on WhatsApp
-          </a>
+        <MakeYourOwn>
           <a href={`tel:${SITE.phone.replace(/\s/g, '')}`} class="btn btn-ghost"><Icon name="phone" /> {SITE.phone}</a>
-        </div>
+        </MakeYourOwn>
       </div>
       <div class="custom-side">
         <div class="card perfect">
@@ -186,12 +172,14 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
       <ol class="how">
         <li><span>1</span><b>Pick your favourites</b>Add candles to your cart and choose sets or packs.</li>
         <li><span>2</span><b>Sign in &amp; order</b>Sign in with Google, add your WhatsApp number and any customisation wishes.</li>
-        <li><span>3</span><b>We confirm on WhatsApp</b>We message you to confirm the order and share payment details — no online payment needed.</li>
+        <li><span>3</span><b>We confirm on WhatsApp</b>We message you to confirm the order and share payment details — no payment needed to place your order.</li>
         <li><span>4</span><b>Packed with love</b>Handmade, boxed and shipped — with updates on WhatsApp.</li>
       </ol>
     </div>
   </section>
 </Base>
+
+<script src="../scripts/carousel.ts"></script>
 
 <style>
   /* hero */
@@ -278,6 +266,15 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
     box-shadow: var(--shadow-lg);
     background: var(--blush);
   }
+  a.arch {
+    display: block;
+    transition:
+      translate 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  a.arch:hover {
+    translate: 0 -4px;
+  }
   .arch :global(img) {
     width: 100%;
     height: 100%;
@@ -303,6 +300,10 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
     width: 33%;
     height: 50%;
     transform: rotate(5deg);
+  }
+  .spark,
+  .flame-badge {
+    pointer-events: none; /* decorations: taps go through to the photo links */
   }
   .spark {
     position: absolute;
@@ -465,71 +466,6 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
     margin: 0 auto;
   }
 
-  /* collections */
-  .collections {
-    display: grid;
-    gap: 20px;
-  }
-  @media (min-width: 760px) {
-    .collections {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-  .col-card {
-    position: relative;
-    display: block;
-    aspect-ratio: 4 / 4.4;
-    border-radius: var(--r-lg);
-    overflow: hidden;
-    text-decoration: none;
-    color: #fff;
-    isolation: isolate;
-  }
-  .col-card :global(.col-img) {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: -2;
-    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  .col-card:hover :global(.col-img) {
-    transform: scale(1.05);
-  }
-  .col-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: linear-gradient(transparent 35%, rgb(40 24 18 / 0.82));
-  }
-  .col-copy {
-    position: absolute;
-    inset: auto 0 0;
-    padding: clamp(20px, 3vw, 32px);
-  }
-  .col-copy .badge {
-    background: var(--gold-2);
-    color: var(--cocoa);
-  }
-  .col-copy h3 {
-    font-size: clamp(1.6rem, 3vw, 2.1rem);
-    margin: 12px 0 6px;
-  }
-  .col-copy p {
-    color: #f1e6dc;
-    max-width: 40ch;
-    font-size: 0.92rem;
-  }
-  .col-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    border-bottom: 1.5px solid var(--gold-2);
-  }
-
   /* custom */
   .custom {
     display: grid;
@@ -610,7 +546,7 @@ const occasions = ['Corporate Gifting', 'Return Gifts', 'Guest Presents', 'Festi
     border-radius: 50%;
     background: var(--cocoa);
     color: var(--gold-2);
-    font: italic 600 1.1rem var(--serif);
+    font: 600 1.1rem var(--serif);
   }
   .how b {
     display: block;

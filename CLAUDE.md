@@ -15,7 +15,7 @@ When a feature conflicts with these rules, the rules win — find a lighter way 
 |---|---|
 | JS per page (gzip) | ≤ 6 KB home/shop/product. /checkout + /account: ≤ 8 KB + the lazy Firebase Auth chunk (~30 KB) |
 | CSS | inlined into HTML (`build.inlineStylesheets: 'always'`), no external stylesheet requests |
-| Web fonts | exactly ONE file (Playfair Display 600 italic, latin, woff2), preloaded. Body text = system fonts |
+| Web fonts | exactly ONE file (Playfair Display 600 upright, latin, woff2), preloaded. Body text = system fonts |
 | Third-party requests on page load | ZERO on home/shop/product. No analytics, no CDN scripts, no Google Fonts link, no Firebase SDK |
 | LCP image | `loading="eager"` + `fetchpriority="high"`; only one per page |
 | HTML for /shop | keep under ~60 KB gzip |
@@ -33,7 +33,7 @@ Check after any change: `npm run build`, then look at `dist/_astro/*.js` sizes (
 
 ### JavaScript — the rules
 - No UI framework (React/Vue/Svelte/Preact). Plain TypeScript in `src/scripts/`, loaded via Astro `<script>` (bundled, deduped, deferred).
-- Prefer HTML/CSS solutions: `<dialog>` for the cart drawer, CSS `:has()` radio filters on /shop, `<details>` for accordions, CSS scroll-snap carousels.
+- Prefer HTML/CSS solutions: `<dialog>` for the cart drawer and the mobile menu sheet, CSS `:has()` radio filters on /shop, `<details>` for accordions, CSS scroll-snap carousels.
 - Customer pages talk to Firestore through the REST API (`src/scripts/firestore-rest.ts`, sends the user's ID token) — ~1 KB instead of the ~100 KB Firestore SDK.
 - Firebase **Auth** SDK (`src/scripts/auth.ts`) is allowed only on `/checkout` and `/account`, and is `await import()`-ed.
   Other pages show sign-in state from the `mb-user` localStorage cache (written by auth.ts, read by cart.ts) — never import auth there.
@@ -43,22 +43,41 @@ Check after any change: `npm run build`, then look at `dist/_astro/*.js` sizes (
 ## Project map
 ```
 src/config.ts            business details, offers (₹599 / ₹999), Firebase env
-src/data/products.ts     THE catalogue (names, prices, variants, notes). Edit products here only.
+src/data/products.ts     catalogue types + SEED catalogue (one-time import / fallback only)
+src/data/catalog.ts      BUILD-TIME loader: Firestore `products` → PRODUCTS (pages import from here)
+src/data/product-validate.ts  product validation (mirror of validProduct() in firestore.rules)
 src/assets/products/     product photos, file name = product slug
-src/components/          ProductImage, ProductCard, Header, Footer, CartDrawer, …
+src/assets/brand/        logo-badge.webp (the round Instagram logo: footer + default share image), logo-mark.png (its candle-and-boxes
+                         picture: header + menu), doodle-pattern.svg (faint logo-style doodles tiled behind every customer page,
+                         set on `body` in global.css; /admin has none). public/favicon.png + apple-touch-icon.png come from the logo.
+src/components/          ProductImage, ProductCard, Header (menu sheet), Footer, CartDrawer (+ sticky cart bar, add-ons), MakeYourOwn, CategoryTiles, PageHero, PolicyPage
 src/layouts/Base.astro   <head>, font preload, header/footer, cart drawer
-src/pages/               index, shop, product/[slug], checkout, account, admin, 404
-src/scripts/             cart.ts (all pages), checkout.ts, account.ts, auth.ts, admin.ts, firestore-rest.ts, order-status.ts
+src/pages/               index, shop, product/[slug], collections/[slug] (one per category), diwali, daisy, bulk-orders, contact,
+                         shipping-policy, refund-policy, privacy-policy, terms, checkout, account, admin, 404
+src/scripts/             cart.ts (all pages), carousel.ts (home Diwali row autoplay), checkout.ts, account.ts, auth.ts, admin.ts, firestore-rest.ts, order-status.ts
 firestore.rules          security rules — paste into Firebase console (or `firebase deploy --only firestore:rules`)
 public/_headers          cache headers (Cloudflare Pages / Netlify both read this file)
-public/_redirects        /track → /account
+public/_redirects        /track, /track-order → /account
 apps-script/              Google Apps Script web app that sends order emails (deployed manually from the shop Gmail)
 scripts/extract-catalog.py  one-time PDF → photos extractor (kept for reference)
 ```
 
 ## Common tasks
-- **Add a product**: drop `<slug>.jpg` in `src/assets/products/`, add an entry in `PRODUCTS` (`src/data/products.ts`). `tone` = average photo colour (any hex close to the photo is fine).
-- **Change a price**: edit `products.ts` only. The admin page flags orders whose prices don't match the current catalogue.
+- **Catalogue source switch**: `CATALOG_FROM_FIRESTORE` in `src/config.ts`. Currently **false** → products come from
+  `SEED_PRODUCTS` in `src/data/products.ts` (edit there; add `<slug>.jpg` + an entry) and /admin has no Products tab.
+  Everything below applies only once it's switched on (README → "Product editor in /admin").
+- **Products live in Firestore** (`products/{slug}`), edited in /admin → Products, read once at build time by `catalog.ts`
+  (REST, public read) — never fetch the catalogue at runtime on customer pages.
+- **Categories** (`CATEGORIES` in `src/data/products.ts`): each product's shop category is its `category` field, or guessed from the slug by `categoryOf()`. Shop chips, /collections/<id>/ pages, the menu and footer all come from it.
+- **Carousels**: add `data-autoplay` to a `.rail` → `carousel.ts` moves it one card every 3 s while on screen; any touch/drag/wheel/key stops it for good, hover pauses, reduced-motion = never moves.
+- **Cart UX**: adding to cart never opens the drawer — a toast + the sticky cart bar (thumbnails with qty badges) show it; the drawer opens only from the bar or the header bag.
+- **Add a product**: owner creates it in /admin, then `<slug>.jpg` goes in `src/assets/products/` and is pushed; the push's
+  build shows it. Products without a photo (or `active: false`) are skipped by the build.
+- **Change a price/details**: /admin → Edit → Save → **Publish to website** (Apps Script `type:'publish'` → Cloudflare
+  deploy hook in Script property `DEPLOY_HOOK_URL`). /admin diffs Firestore against the build's embedded `#live-catalog`.
+  The admin page flags orders whose prices don't match the live catalogue.
+- Product fields change → update `ProductDoc`, `toDoc/fromDoc/fingerprint` (products.ts), `product-validate.ts` and
+  `validProduct()` in firestore.rules together. Slugs never change (URL, photo name, `slug:variant` in orders).
 - **Change offer thresholds** (₹599 / ₹999): update `OFFERS` in `src/config.ts` AND the two numbers in `firestore.rules` `validNewOrder()` — otherwise new orders get rejected.
 - **Order statuses**: `new → confirmed → paid → shipped → delivered` (+ `cancelled`). Defined in `src/scripts/order-status.ts`; update rules + account page if you add one.
 
@@ -68,6 +87,7 @@ scripts/extract-catalog.py  one-time PDF → photos extractor (kept for referenc
   can read; create requires sign-in, `contactConsent == true` and passes field validation. Order + profile are written in one
   atomic commit. Admin-only fields: `shippingCharge` (₹, null until set; ignored when `freeShipping`), `statusUpdatedAt`, `adminNote`.
   Total = `orderTotal()` in order-status.ts (subtotal + shipping).
+- `products/{slug}` — public read (build), admin write with `validProduct()`. `settings/catalog` = last Publish click.
 - `settings/shop` — admin-only `{ upiId }`, edited in /admin → Shop settings, used in the WhatsApp confirm message and "Confirmed" email.
 - /admin edits are drafts until **Save changes** (status change → confirm() → `statusUpdatedAt: serverTimestamp()` → status email).
 - Payments are NOT taken online: the checkout must always tell customers (before and after placing the order) that they'll be

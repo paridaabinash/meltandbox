@@ -14,8 +14,8 @@ import {
   updateDoc,
   type Timestamp,
 } from 'firebase/firestore';
-import { FIREBASE, ORDER_EMAIL_URL, SITE } from '../config';
-import { PRODUCTS } from '../data/products';
+import { CATALOG_FROM_FIRESTORE, FIREBASE, ORDER_EMAIL_URL, SITE } from '../config';
+import { catalogPrice, setupProducts } from './admin-products';
 import { CANCELLED, STATUSES, orderTotal, statusInfo, type Order } from './order-status';
 
 type Row = Order & { id: string };
@@ -25,8 +25,6 @@ const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 const msg = (html: string) => ($('[data-msg]').innerHTML = html);
 const ALL_STATUSES = [...STATUSES, CANCELLED];
 const UPI_RE = /^[\w.\-]{2,256}@[a-zA-Z][\w.]{1,63}$/;
-
-const priceOf = new Map(PRODUCTS.flatMap((p) => p.variants.map((v) => [`${p.slug}:${v.id}`, v.price] as const)));
 
 if (!FIREBASE.apiKey || !FIREBASE.projectId) {
   msg('Firebase is not configured yet. Add the <code>PUBLIC_FIREBASE_*</code> values (see README) and rebuild.');
@@ -60,6 +58,18 @@ function start() {
   });
   $('[data-signout]').addEventListener('click', () => signOut(auth));
 
+  // ── Orders / Products switch ──
+  // Switched off by CATALOG_FROM_FIRESTORE (config.ts): no Products tab, no product listeners.
+  const products = CATALOG_FROM_FIRESTORE
+    ? setupProducts(db, () => me, (n) => ($('[data-products-n]').textContent = n ? String(n) : ''))
+    : { watch: () => [] };
+  $('.views').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-view]');
+    if (!b) return;
+    document.querySelectorAll<HTMLElement>('[data-view]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll<HTMLElement>('[data-pane]').forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.view));
+  });
+
   onAuthStateChanged(auth, (user) => {
     unsubs.forEach((u) => u());
     unsubs = [];
@@ -74,6 +84,7 @@ function start() {
     $('[data-user-email]').textContent = user.email ?? '';
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(300));
     unsubs.push(
+      ...products.watch(),
       onSnapshot(
         q,
         (snap) => {
@@ -261,7 +272,7 @@ function start() {
     let mismatch = false;
     $('.o-items ul', el).innerHTML = r.items
       .map((i) => {
-        const cat = priceOf.get(`${i.slug}:${i.variant}`);
+        const cat = catalogPrice(`${i.slug}:${i.variant}`);
         expected += (cat ?? i.price) * i.qty;
         if (cat !== i.price) mismatch = true;
         return `<li><span>${esc(i.name)} <span class="muted">(${esc(i.variantLabel)}) × ${i.qty}</span></span><b>${inr(i.price * i.qty)}</b></li>`;

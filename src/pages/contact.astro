@@ -1,0 +1,108 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import { SITE, igLink, waLink } from '../config';
+
+const tel = `tel:${SITE.phone.replace(/\s/g, '')}`;
+---
+
+<Base title="Contact us" description={`WhatsApp, call or message ${SITE.name} on Instagram — ${SITE.phone} · @${SITE.instagram}.`}>
+  <section class="wrap contact">
+    <p class="eyebrow">Say hello</p>
+    <h1>Contact us</h1>
+    <p class="lede">WhatsApp is the quickest way to reach us — for questions, custom candles or an order you've placed.</p>
+
+    <ul class="ways">
+      <li>
+        <a href={waLink('Hi Melt & Box Co.!')} target="_blank" rel="noopener" class="way">
+          <span class="way-ic wa"><Icon name="whatsapp" size={26} /></span>
+          <b>WhatsApp</b>
+          <span>{SITE.phone}</span>
+        </a>
+      </li>
+      <li>
+        <a href={tel} class="way">
+          <span class="way-ic"><Icon name="phone" size={26} /></span>
+          <b>Call us</b>
+          <span>{SITE.phone}</span>
+        </a>
+      </li>
+      <li>
+        <a href={igLink} target="_blank" rel="noopener" class="way">
+          <span class="way-ic"><Icon name="instagram" size={26} /></span>
+          <b>Instagram</b>
+          <span>@{SITE.instagram}</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="more">
+      <a href="/account/" class="btn btn-ghost">Track my order</a>
+      <a href="/bulk-orders/" class="btn btn-ghost">Bulk &amp; corporate orders</a>
+      <a href="/#custom" class="btn btn-ghost">Make your own candle</a>
+    </div>
+
+    <p class="muted founder">{SITE.name} is run by {SITE.founder}. Every candle is made by hand, to order.</p>
+  </section>
+</Base>
+
+<style>
+  .contact {
+    max-width: 880px;
+    padding-block: clamp(28px, 5vw, 56px) clamp(48px, 8vw, 96px);
+  }
+  .ways {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 14px;
+    margin: 28px 0;
+    padding: 0;
+    list-style: none;
+  }
+  .way {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    padding: 24px 16px;
+    border-radius: var(--r);
+    background: var(--paper);
+    border: 1px solid var(--sand);
+    text-align: center;
+    text-decoration: none;
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+  }
+  .way:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+  .way-ic {
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    margin-bottom: 8px;
+    border-radius: 50%;
+    background: var(--blush);
+    color: var(--rose);
+  }
+  .way-ic.wa {
+    color: var(--ok);
+  }
+  .way span:last-child {
+    color: var(--cocoa-2);
+    font-size: 0.92rem;
+  }
+  .more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .founder {
+    margin-top: 28px;
+    font-size: 0.9rem;
+  }
+</style>

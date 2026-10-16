@@ -1,0 +1,69 @@
+---
+// Hero for landing pages (/diwali/, /daisy/, /bulk-orders/): copy + buttons on the left, one product photo (the LCP image) on the right.
+import ProductImage from './ProductImage.astro';
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  lede: string;
+  /** Product photo slug (src/assets/products/<slug>.jpg) */
+  image: string;
+  tone: string;
+}
+const { eyebrow, title, lede, image, tone } = Astro.props;
+---
+
+<section class="ph">
+  <div class="wrap ph-in">
+    <div class="ph-copy">
+      <p class="eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      <p class="lede">{lede}</p>
+      <div class="ph-cta"><slot /></div>
+    </div>
+    <div class="ph-art">
+      <ProductImage slug={image} alt="" sizes="(min-width: 900px) 460px, 100vw" tone={tone} eager class="ph-img" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .ph {
+    background:
+      radial-gradient(900px 360px at 85% 0%, rgb(246 198 107 / 0.2), transparent 70%),
+      linear-gradient(var(--cream), var(--blush));
+  }
+  .ph-in {
+    display: grid;
+    gap: 24px;
+    padding-block: clamp(24px, 5vw, 64px);
+    align-items: center;
+  }
+  @media (min-width: 900px) {
+    .ph-in {
+      grid-template-columns: 1.1fr 1fr;
+      gap: 56px;
+    }
+  }
+  .ph-copy h1 {
+    margin-bottom: 0.3em;
+  }
+  .ph-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .ph-art {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--blush);
+    box-shadow: var(--shadow-lg);
+  }
+  .ph-art :global(.ph-img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+</style>
